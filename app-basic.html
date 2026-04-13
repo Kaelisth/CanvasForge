@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CanvasForge — Basic Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#111115;--bg2:#18181d;--bg3:#1e1e24;
+  --surface:#222230;--surface2:#2a2a38;
+  --border:#2c2c3a;--border2:#38384a;
+  --text:#e2e0ea;--text2:#9896a8;--text3:#6c6a7a;
+  --accent:#8b5cf6;--accent2:#a78bfa;
+  --font:'DM Sans',system-ui,sans-serif;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+
+/* ─── TOPBAR ─── */
+.topbar{height:42px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1rem;gap:.75rem;flex-shrink:0;z-index:10}
+.topbar-logo{display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.82rem;letter-spacing:-.01em;color:var(--text)}
+.topbar-logo svg{width:18px;height:18px}
+.topbar-tag{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;padding:.15rem .5rem;border-radius:4px;background:rgba(255,255,255,.06);color:var(--text3);font-weight:600}
+.topbar-sep{width:1px;height:20px;background:var(--border);margin:0 .25rem}
+.topbar-actions{display:flex;gap:.3rem;margin-left:auto}
+.topbar-btn{display:flex;align-items:center;gap:.35rem;padding:.3rem .6rem;font-size:.75rem;color:var(--text2);border:1px solid transparent;border-radius:5px;background:none;cursor:pointer;transition:all .2s;font-family:inherit}
+.topbar-btn:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.topbar-btn.active{background:rgba(139,92,246,.1);color:var(--accent);border-color:rgba(139,92,246,.2)}
+.topbar-btn svg{width:14px;height:14px}
+.lang-mini{position:relative}
+.lang-mini-menu{position:absolute;top:calc(100% + 4px);right:0;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.25rem;display:none;min-width:100px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:50}
+.lang-mini.open .lang-mini-menu{display:block}
+.lang-mini-menu button{display:block;width:100%;text-align:left;padding:.35rem .6rem;font-size:.75rem;border-radius:4px;background:none;border:none;color:var(--text2);cursor:pointer;font-family:inherit}
+.lang-mini-menu button:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.lang-mini-menu button.active{color:var(--accent)}
+
+/* ─── LAYOUT ─── */
+.app-body{display:flex;flex:1;overflow:hidden}
+
+/* ─── TOOLBAR ─── */
+.toolbar{width:52px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:.6rem 0;gap:.35rem;flex-shrink:0}
+.tool-btn{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;background:none;color:var(--text3);transition:all .2s;position:relative}
+.tool-btn:hover{background:rgba(255,255,255,.06);color:var(--text2)}
+.tool-btn.active{background:rgba(139,92,246,.15);color:var(--accent)}
+.tool-btn svg{width:18px;height:18px}
+.tool-sep{width:28px;height:1px;background:var(--border);margin:.25rem 0}
+.tool-btn[title]::after{content:attr(title);position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);background:var(--surface);color:var(--text);font-size:.7rem;padding:.25rem .5rem;border-radius:4px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;border:1px solid var(--border);z-index:20}
+.tool-btn:hover::after{opacity:1}
+
+/* ─── CANVAS ─── */
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
+.canvas-wrap{position:relative;box-shadow:0 4px 30px rgba(0,0,0,.3)}
+canvas{display:block;cursor:crosshair}
+
+/* ─── SIDEBAR ─── */
+.sidebar{width:220px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.panel{padding:.8rem;border-bottom:1px solid var(--border)}
+.panel-title{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:.6rem;font-weight:600}
+.color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.color-swatch{aspect-ratio:1;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.color-swatch:hover{transform:scale(1.1)}
+.color-swatch.active{border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.2)}
+.slider-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem}
+.slider-row label{font-size:.72rem;color:var(--text2);min-width:40px;flex-shrink:0}
+.slider-row input[type=range]{flex:1;-webkit-appearance:none;height:5px;background:var(--surface2);border-radius:3px;outline:none}
+.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg2)}
+.slider-row span{font-size:.7rem;color:var(--text3);min-width:26px;text-align:right}
+.cur-color-preview{display:flex;align-items:center;gap:.5rem;margin-top:.5rem}
+.cur-color-box{width:32px;height:32px;border-radius:6px;border:1px solid var(--border)}
+.cur-color-hex{font-size:.75rem;color:var(--text2);font-family:monospace}
+
+/* ─── BOTTOM BAR ─── */
+.bottombar{height:28px;background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 .75rem;font-size:.68rem;color:var(--text3);gap:1rem;flex-shrink:0}
+.bottombar span{display:flex;align-items:center;gap:.3rem}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <svg viewBox="0 0 28 28" fill="none"><rect x="2" y="2" width="24" height="24" rx="6" stroke="currentColor" stroke-width="1.5" fill="rgba(139,92,246,.12)"/><path d="M8 20L14 8l6 12" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+    CanvasForge
+  </div>
+  <span class="topbar-tag" data-i18n="tag">BASIC</span>
+  <div class="topbar-sep"></div>
+  <button class="topbar-btn" id="undoBtn" data-i18n-title="undo"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8h8a3 3 0 010 6H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6 5L3 8l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="undo">Undo</span></button>
+  <button class="topbar-btn" id="redoBtn" data-i18n-title="redo"><svg viewBox="0 0 16 16" fill="none"><path d="M13 8H5a3 3 0 000 6h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 5l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="redo">Redo</span></button>
+  <button class="topbar-btn" id="clearBtn"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="clear">Clear</span></button>
+  <div class="topbar-actions">
+    <button class="topbar-btn" id="exportBtn"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 6l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12v2h12v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span data-i18n="export">Export PNG</span></button>
+    <a href="index.html" class="topbar-btn"><svg viewBox="0 0 16 16" fill="none"><path d="M2 8l6-5 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 7v6h8V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></a>
+    <div class="lang-mini" id="langMini">
+      <button class="topbar-btn" id="langToggle"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M2 8h12M8 2c2 2 2.5 4 2.5 6s-.5 4-2.5 6M8 2c-2 2-2.5 4-2.5 6s.5 4 2.5 6" stroke="currentColor" stroke-width="1.3"/></svg><span id="langLabel">EN</span></button>
+      <div class="lang-mini-menu" id="langMenu">
+        <button data-lang="en" class="active">English</button>
+        <button data-lang="zh">中文</button>
+        <button data-lang="ja">日本語</button>
+        <button data-lang="ko">한국어</button>
+        <button data-lang="fr">Français</button>
+        <button data-lang="es">Español</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="app-body">
+  <!-- TOOLBAR -->
+  <div class="toolbar" id="toolbar">
+    <button class="tool-btn active" data-tool="brush" title="Brush"><svg viewBox="0 0 18 18" fill="none"><path d="M3 15c1-2 3-3 5-5l5-5 2 2-5 5c-2 2-3 4-5 5-1 0-2-1-2-2z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+    <button class="tool-btn" data-tool="eraser" title="Eraser"><svg viewBox="0 0 18 18" fill="none"><path d="M6 15h8M4.5 12.5l7-7 3 3-7 7-3.5.5.5-3.5z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" data-tool="line" title="Line"><svg viewBox="0 0 18 18" fill="none"><path d="M4 14L14 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+    <button class="tool-btn" data-tool="rect" title="Rectangle"><svg viewBox="0 0 18 18" fill="none"><rect x="3" y="4" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="tool-btn" data-tool="circle" title="Circle"><svg viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" data-tool="fill" title="Fill"><svg viewBox="0 0 18 18" fill="none"><path d="M6 12l-2 3 3-2 7-7-1-1-7 7z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 13c1 2-1 3-1 3s-2-1-1-3l1-2 1 2z" fill="currentColor" opacity=".5"/></svg></button>
+    <button class="tool-btn" data-tool="eyedropper" title="Eyedropper"><svg viewBox="0 0 18 18" fill="none"><path d="M10 4l4 4M6 8l4 4-5 5H3v-2l8-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="3" r="2" stroke="currentColor" stroke-width="1.3"/></svg></button>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area" id="canvasArea">
+    <div class="canvas-wrap">
+      <canvas id="canvas" width="900" height="600"></canvas>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="panel">
+      <div class="panel-title" data-i18n="colors">Colors</div>
+      <div class="color-grid" id="colorGrid"></div>
+      <div class="cur-color-preview">
+        <div class="cur-color-box" id="curColorBox"></div>
+        <span class="cur-color-hex" id="curColorHex">#000000</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" data-i18n="brush_size">Brush Size</div>
+      <div class="slider-row">
+        <label>Size</label>
+        <input type="range" min="1" max="50" value="4" id="sizeSlider">
+        <span id="sizeVal">4</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" data-i18n="opacity">Opacity</div>
+      <div class="slider-row">
+        <label>α</label>
+        <input type="range" min="10" max="100" value="100" id="opacitySlider">
+        <span id="opacityVal">100%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM -->
+<div class="bottombar">
+  <span>900 × 600</span>
+  <span id="cursorPos">0, 0</span>
+  <span id="toolLabel" data-i18n="tool_brush" style="margin-left:auto">Brush</span>
+</div>
+
+<script>
+/* ─── i18n ─── */
+const L={
+  en:{tag:'BASIC',undo:'Undo',redo:'Redo',clear:'Clear',export:'Export PNG',colors:'Colors',brush_size:'Brush Size',opacity:'Opacity',tool_brush:'Brush',tool_eraser:'Eraser',tool_line:'Line',tool_rect:'Rectangle',tool_circle:'Circle',tool_fill:'Fill',tool_eyedropper:'Eyedropper'},
+  zh:{tag:'基础版',undo:'撤销',redo:'重做',clear:'清除',export:'导出 PNG',colors:'颜色',brush_size:'画笔大小',opacity:'透明度',tool_brush:'画笔',tool_eraser:'橡皮擦',tool_line:'直线',tool_rect:'矩形',tool_circle:'圆形',tool_fill:'填充',tool_eyedropper:'吸管'},
+  ja:{tag:'ベーシック',undo:'元に戻す',redo:'やり直す',clear:'クリア',export:'PNG出力',colors:'カラー',brush_size:'ブラシサイズ',opacity:'不透明度',tool_brush:'ブラシ',tool_eraser:'消しゴム',tool_line:'直線',tool_rect:'四角',tool_circle:'円',tool_fill:'塗りつぶし',tool_eyedropper:'スポイト'},
+  ko:{tag:'기본',undo:'실행 취소',redo:'다시 실행',clear:'지우기',export:'PNG 내보내기',colors:'색상',brush_size:'브러시 크기',opacity:'불투명도',tool_brush:'브러시',tool_eraser:'지우개',tool_line:'직선',tool_rect:'사각형',tool_circle:'원',tool_fill:'채우기',tool_eyedropper:'스포이트'},
+  fr:{tag:'BASIC',undo:'Annuler',redo:'Rétablir',clear:'Effacer',export:'Exporter PNG',colors:'Couleurs',brush_size:'Taille pinceau',opacity:'Opacité',tool_brush:'Pinceau',tool_eraser:'Gomme',tool_line:'Ligne',tool_rect:'Rectangle',tool_circle:'Cercle',tool_fill:'Remplir',tool_eyedropper:'Pipette'},
+  es:{tag:'BÁSICA',undo:'Deshacer',redo:'Rehacer',clear:'Limpiar',export:'Exportar PNG',colors:'Colores',brush_size:'Tamaño pincel',opacity:'Opacidad',tool_brush:'Pincel',tool_eraser:'Borrador',tool_line:'Línea',tool_rect:'Rectángulo',tool_circle:'Círculo',tool_fill:'Rellenar',tool_eyedropper:'Gotero'}
+};
+let lang='en';
+function setLang(l){
+  lang=l;const d=L[l]||L.en;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n');if(d[k])el.textContent=d[k]});
+  document.querySelectorAll('.lang-mini-menu button').forEach(b=>b.classList.toggle('active',b.dataset.lang===l));
+  document.getElementById('langLabel').textContent=l.toUpperCase();
+  updateToolLabel();
+  localStorage.setItem('cf_lang',l);
+}
+function updateToolLabel(){
+  const d=L[lang]||L.en;
+  const k='tool_'+currentTool;
+  document.getElementById('toolLabel').textContent=d[k]||currentTool;
+}
+const lm=document.getElementById('langMini');
+document.getElementById('langToggle').addEventListener('click',e=>{e.stopPropagation();lm.classList.toggle('open')});
+document.querySelectorAll('#langMenu button').forEach(b=>b.addEventListener('click',()=>{setLang(b.dataset.lang);lm.classList.remove('open')}));
+document.addEventListener('click',()=>lm.classList.remove('open'));
+const savedL=localStorage.getItem('cf_lang');if(savedL&&L[savedL])setLang(savedL);
+
+/* ─── COLORS ─── */
+const COLORS=['#1a1a2e','#16213e','#0f3460','#533483','#e94560','#f43f5e','#ff6b6b','#ffa502','#ffc048','#ffdd59','#2ed573','#26de81','#0be881','#18dcff','#3b82f6','#7d5fff','#8b5cf6','#a78bfa','#ec4899','#f472b6','#ffffff','#c8c8c8','#808080','#2d2d2d'];
+const grid=document.getElementById('colorGrid');
+COLORS.forEach((c,i)=>{
+  const s=document.createElement('div');
+  s.className='color-swatch'+(i===0?' active':'');
+  s.style.background=c;
+  s.dataset.color=c;
+  s.addEventListener('click',()=>{
+    document.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('active'));
+    s.classList.add('active');
+    currentColor=c;
+    updateColorPreview();
+  });
+  grid.appendChild(s);
+});
+let currentColor='#1a1a2e';
+function updateColorPreview(){
+  document.getElementById('curColorBox').style.background=currentColor;
+  document.getElementById('curColorHex').textContent=currentColor;
+}
+updateColorPreview();
+
+/* ─── CANVAS ─── */
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+ctx.fillStyle='#ffffff';
+ctx.fillRect(0,0,canvas.width,canvas.height);
+ctx.lineCap='round';ctx.lineJoin='round';
+let drawing=false,currentTool='brush',brushSize=4,opacity=1;
+let startX,startY,history=[],historyIdx=-1;
+saveState();
+
+function saveState(){
+  history=history.slice(0,historyIdx+1);
+  history.push(canvas.toDataURL());
+  historyIdx=history.length-1;
+  if(history.length>50){history.shift();historyIdx--}
+}
+function restoreState(idx){
+  const img=new Image();
+  img.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0)};
+  img.src=history[idx];
+}
+
+document.getElementById('undoBtn').addEventListener('click',()=>{if(historyIdx>0){historyIdx--;restoreState(historyIdx)}});
+document.getElementById('redoBtn').addEventListener('click',()=>{if(historyIdx<history.length-1){historyIdx++;restoreState(historyIdx)}});
+document.getElementById('clearBtn').addEventListener('click',()=>{ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);saveState()});
+document.getElementById('exportBtn').addEventListener('click',()=>{const a=document.createElement('a');a.download='canvasforge-basic.png';a.href=canvas.toDataURL('image/png');a.click()});
+
+document.getElementById('sizeSlider').addEventListener('input',e=>{brushSize=+e.target.value;document.getElementById('sizeVal').textContent=brushSize});
+document.getElementById('opacitySlider').addEventListener('input',e=>{opacity=+e.target.value/100;document.getElementById('opacityVal').textContent=e.target.value+'%'});
+
+/* ─── TOOLS ─── */
+document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    currentTool=b.dataset.tool;
+    updateToolLabel();
+    canvas.style.cursor=currentTool==='eyedropper'?'copy':currentTool==='fill'?'cell':'crosshair';
+  });
+});
+
+let tempCanvas,tempCtx;
+function getTempCanvas(){
+  if(!tempCanvas){tempCanvas=document.createElement('canvas');tempCanvas.width=canvas.width;tempCanvas.height=canvas.height;tempCtx=tempCanvas.getContext('2d')}
+  tempCtx.clearRect(0,0,tempCanvas.width,tempCanvas.height);
+  tempCtx.drawImage(canvas,0,0);
+  return tempCanvas;
+}
+
+canvas.addEventListener('mousedown',e=>{
+  const r=canvas.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(canvas.width/r.width);
+  const y=(e.clientY-r.top)*(canvas.height/r.height);
+  startX=x;startY=y;
+
+  if(currentTool==='eyedropper'){
+    const p=ctx.getImageData(Math.round(x),Math.round(y),1,1).data;
+    currentColor='#'+[p[0],p[1],p[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
+    document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+    updateColorPreview();return;
+  }
+  if(currentTool==='fill'){
+    floodFill(Math.round(x),Math.round(y),currentColor);saveState();return;
+  }
+
+  drawing=true;
+  if(['line','rect','circle'].includes(currentTool))getTempCanvas();
+  if(currentTool==='brush'||currentTool==='eraser'){
+    ctx.globalAlpha=currentTool==='eraser'?1:opacity;
+    ctx.strokeStyle=currentTool==='eraser'?'#ffffff':currentColor;
+    ctx.lineWidth=brushSize;
+    ctx.beginPath();ctx.moveTo(x,y);
+  }
+});
+
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(canvas.width/r.width);
+  const y=(e.clientY-r.top)*(canvas.height/r.height);
+  document.getElementById('cursorPos').textContent=`${Math.round(x)}, ${Math.round(y)}`;
+  if(!drawing)return;
+
+  if(currentTool==='brush'||currentTool==='eraser'){
+    ctx.lineTo(x,y);ctx.stroke();
+  } else if(['line','rect','circle'].includes(currentTool)){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(tempCanvas,0,0);
+    ctx.globalAlpha=opacity;ctx.strokeStyle=currentColor;ctx.lineWidth=brushSize;
+    ctx.beginPath();
+    if(currentTool==='line'){ctx.moveTo(startX,startY);ctx.lineTo(x,y)}
+    else if(currentTool==='rect'){ctx.rect(startX,startY,x-startX,y-startY)}
+    else{const rx=(x-startX)/2,ry=(y-startY)/2;ctx.ellipse(startX+rx,startY+ry,Math.abs(rx),Math.abs(ry),0,0,Math.PI*2)}
+    ctx.stroke();
+  }
+});
+
+canvas.addEventListener('mouseup',()=>{if(drawing){drawing=false;ctx.globalAlpha=1;saveState()}});
+canvas.addEventListener('mouseleave',()=>{if(drawing){drawing=false;ctx.globalAlpha=1;saveState()}});
+
+/* Flood fill */
+function floodFill(sx,sy,fillColor){
+  const id=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const d=id.data;const w=canvas.width;const h=canvas.height;
+  const fc=hexToRgb(fillColor);
+  const ti=(sy*w+sx)*4;
+  const tr=d[ti],tg=d[ti+1],tb=d[ti+2];
+  if(tr===fc[0]&&tg===fc[1]&&tb===fc[2])return;
+  const stack=[[sx,sy]];
+  const match=(i)=>d[i]===tr&&d[i+1]===tg&&d[i+2]===tb;
+  while(stack.length){
+    const[cx,cy]=stack.pop();
+    const ci=(cy*w+cx)*4;
+    if(cx<0||cx>=w||cy<0||cy>=h||!match(ci))continue;
+    d[ci]=fc[0];d[ci+1]=fc[1];d[ci+2]=fc[2];d[ci+3]=255;
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+  }
+  ctx.putImageData(id,0,0);
+}
+function hexToRgb(h){const v=parseInt(h.slice(1),16);return[(v>>16)&255,(v>>8)&255,v&255]}
+
+/* Keyboard shortcuts */
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='z'){e.preventDefault();document.getElementById('undoBtn').click()}
+  if(e.ctrlKey&&e.key==='y'){e.preventDefault();document.getElementById('redoBtn').click()}
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CanvasForge — Digital Painting Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0c;--bg2:#111115;--bg3:#18181d;
+  --surface:#1e1e24;--surface2:#26262e;
+  --border:#2a2a35;--border2:#35354a;
+  --text:#e8e6f0;--text2:#9896a8;--text3:#6c6a7a;
+  --accent:#c5a2ff;--accent2:#8b5cf6;--accent3:#6d28d9;
+  --warm:#f59e0b;--rose:#f43f5e;--teal:#14b8a6;
+  --font-display:'Playfair Display',Georgia,serif;
+  --font-body:'DM Sans',system-ui,sans-serif;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+
+/* ─── GRAIN OVERLAY ─── */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size:128px 128px;opacity:.4}
+
+/* ─── NAV ─── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:1.25rem 2.5rem;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(20px);background:rgba(10,10,12,.7);border-bottom:1px solid transparent;transition:border-color .4s}
+.nav.scrolled{border-bottom-color:var(--border)}
+.nav-logo{display:flex;align-items:center;gap:.65rem}
+.nav-logo svg{width:28px;height:28px}
+.nav-logo span{font-family:var(--font-display);font-size:1.15rem;font-weight:600;letter-spacing:-.02em}
+.nav-links{display:flex;align-items:center;gap:2rem}
+.nav-links a{font-size:.85rem;color:var(--text2);transition:color .25s;letter-spacing:.02em;font-weight:500}
+.nav-links a:hover{color:var(--text)}
+.nav-right{display:flex;align-items:center;gap:1rem}
+.lang-switch{position:relative}
+.lang-btn{display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--text2);padding:.4rem .75rem;border:1px solid var(--border);border-radius:6px;transition:all .25s;background:rgba(255,255,255,.03)}
+.lang-btn:hover{border-color:var(--border2);color:var(--text)}
+.lang-btn svg{width:14px;height:14px;transition:transform .25s}
+.lang-switch.open .lang-btn svg{transform:rotate(180deg)}
+.lang-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:140px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.35rem;opacity:0;visibility:hidden;transform:translateY(-6px);transition:all .2s;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.lang-switch.open .lang-menu{opacity:1;visibility:visible;transform:translateY(0)}
+.lang-menu button{width:100%;text-align:left;padding:.5rem .75rem;font-size:.82rem;border-radius:5px;transition:background .15s;color:var(--text2)}
+.lang-menu button:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.lang-menu button.active{color:var(--accent)}
+.btn-cta-sm{font-size:.82rem;font-weight:600;padding:.55rem 1.25rem;background:var(--accent2);color:#fff;border-radius:8px;transition:all .25s;letter-spacing:.01em}
+.btn-cta-sm:hover{background:var(--accent3);transform:translateY(-1px);box-shadow:0 4px 20px rgba(139,92,246,.3)}
+
+/* ─── HERO ─── */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:8rem 2rem 4rem;position:relative;overflow:hidden}
+.hero-glow{position:absolute;width:600px;height:600px;border-radius:50%;filter:blur(120px);opacity:.15;pointer-events:none}
+.hero-glow.g1{top:-150px;left:20%;background:var(--accent2)}
+.hero-glow.g2{bottom:-100px;right:15%;background:var(--rose)}
+.hero-glow.g3{top:30%;left:55%;background:var(--teal);width:400px;height:400px;opacity:.08}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem 1rem .4rem .6rem;background:rgba(197,162,255,.08);border:1px solid rgba(197,162,255,.15);border-radius:100px;font-size:.78rem;color:var(--accent);margin-bottom:2rem;animation:fadeUp .8s ease}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-family:var(--font-display);font-size:clamp(2.8rem,6.5vw,5.5rem);font-weight:700;line-height:1.05;letter-spacing:-.035em;max-width:900px;margin-bottom:1.5rem;animation:fadeUp .8s ease .1s both}
+.hero h1 em{font-style:italic;background:linear-gradient(135deg,var(--accent),var(--rose));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:1.1rem;color:var(--text2);max-width:520px;line-height:1.65;animation:fadeUp .8s ease .2s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.hero-actions{display:flex;gap:1rem;margin-top:2.5rem;animation:fadeUp .8s ease .35s both}
+.btn-primary{display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 2rem;background:var(--accent2);color:#fff;font-weight:600;font-size:.92rem;border-radius:10px;transition:all .3s;letter-spacing:.01em}
+.btn-primary:hover{background:var(--accent3);transform:translateY(-2px);box-shadow:0 8px 30px rgba(139,92,246,.3)}
+.btn-primary svg{width:18px;height:18px}
+.btn-secondary{display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 2rem;border:1px solid var(--border2);color:var(--text);font-weight:500;font-size:.92rem;border-radius:10px;transition:all .3s;background:rgba(255,255,255,.02)}
+.btn-secondary:hover{border-color:var(--accent);background:rgba(139,92,246,.05);transform:translateY(-2px)}
+
+/* ─── PREVIEW ─── */
+.preview-section{padding:0 2rem 6rem;display:flex;justify-content:center;animation:fadeUp .8s ease .5s both}
+.preview-window{width:100%;max-width:1100px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 20px 80px rgba(0,0,0,.5)}
+.preview-bar{display:flex;align-items:center;gap:.5rem;padding:.8rem 1.2rem;background:var(--bg3);border-bottom:1px solid var(--border)}
+.preview-dot{width:10px;height:10px;border-radius:50%}
+.preview-dot.r{background:#ff5f57}.preview-dot.y{background:#ffbd2e}.preview-dot.g{background:#28ca41}
+.preview-bar span{font-size:.72rem;color:var(--text3);margin-left:.5rem;letter-spacing:.03em}
+.preview-canvas{position:relative;height:420px;overflow:hidden;background:var(--surface)}
+.preview-canvas img{width:100%;height:100%;object-fit:cover;opacity:.6}
+.preview-ui-mock{position:absolute;inset:0;display:flex}
+.mock-toolbar{width:56px;background:rgba(17,17,21,.95);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding-top:1rem;gap:.6rem}
+.mock-tool{width:34px;height:34px;border-radius:7px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;transition:all .25s;cursor:pointer}
+.mock-tool:hover,.mock-tool.active{background:rgba(139,92,246,.2);box-shadow:0 0 12px rgba(139,92,246,.15)}
+.mock-tool svg{width:16px;height:16px;color:var(--text2)}
+.mock-tool.active svg{color:var(--accent)}
+.mock-panel{width:240px;background:rgba(17,17,21,.92);border-left:1px solid var(--border);margin-left:auto;padding:1rem;overflow-y:auto}
+.mock-panel-title{font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.8rem;font-weight:600}
+.mock-colors{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:1.2rem}
+.mock-color{width:100%;aspect-ratio:1;border-radius:5px;cursor:pointer;transition:transform .15s;border:1px solid rgba(255,255,255,.05)}
+.mock-color:hover{transform:scale(1.15)}
+.mock-slider{height:6px;background:var(--surface2);border-radius:3px;margin-bottom:.8rem;position:relative}
+.mock-slider::after{content:'';position:absolute;left:0;top:0;width:60%;height:100%;background:var(--accent2);border-radius:3px}
+.mock-canvas-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+.canvas-strokes{position:absolute;inset:0}
+.canvas-strokes svg{width:100%;height:100%}
+
+/* ─── FEATURES ─── */
+.features{padding:6rem 2rem;max-width:1200px;margin:0 auto}
+.section-label{font-size:.75rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;font-weight:600;margin-bottom:.75rem}
+.section-title{font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);font-weight:600;letter-spacing:-.025em;line-height:1.15;margin-bottom:1rem}
+.section-desc{color:var(--text2);font-size:1rem;max-width:500px;line-height:1.7}
+.features-header{margin-bottom:4rem}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.feature-card{padding:2rem;background:var(--bg2);border:1px solid var(--border);border-radius:14px;transition:all .35s;position:relative;overflow:hidden}
+.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent2),transparent);opacity:0;transition:opacity .35s}
+.feature-card:hover{border-color:var(--border2);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.feature-card:hover::before{opacity:1}
+.feature-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;font-size:1.2rem}
+.feature-icon.purple{background:rgba(139,92,246,.12);color:var(--accent)}
+.feature-icon.rose{background:rgba(244,63,94,.12);color:var(--rose)}
+.feature-icon.teal{background:rgba(20,184,166,.12);color:var(--teal)}
+.feature-icon.warm{background:rgba(245,158,11,.12);color:var(--warm)}
+.feature-card h3{font-size:1.05rem;font-weight:600;margin-bottom:.6rem;letter-spacing:-.01em}
+.feature-card p{font-size:.88rem;color:var(--text2);line-height:1.6}
+
+/* ─── COMPARE ─── */
+.compare{padding:6rem 2rem;max-width:1100px;margin:0 auto}
+.compare-header{text-align:center;margin-bottom:4rem}
+.compare-header .section-desc{margin:0 auto;margin-top:.5rem}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+.compare-card{padding:2.5rem;border:1px solid var(--border);border-radius:16px;background:var(--bg2);position:relative;transition:all .35s}
+.compare-card:hover{border-color:var(--border2)}
+.compare-card.pro{border-color:rgba(139,92,246,.25);background:linear-gradient(165deg,rgba(139,92,246,.05),var(--bg2) 60%)}
+.compare-card.pro:hover{border-color:rgba(139,92,246,.45)}
+.compare-tag{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:1rem;display:inline-block;padding:.3rem .8rem;border-radius:5px}
+.compare-card:not(.pro) .compare-tag{background:rgba(255,255,255,.06);color:var(--text2)}
+.compare-card.pro .compare-tag{background:rgba(139,92,246,.15);color:var(--accent)}
+.compare-card h3{font-family:var(--font-display);font-size:1.5rem;margin-bottom:.6rem;font-weight:600}
+.compare-card>p{font-size:.88rem;color:var(--text2);line-height:1.6;margin-bottom:1.5rem}
+.compare-list{list-style:none;display:flex;flex-direction:column;gap:.65rem;margin-bottom:2rem}
+.compare-list li{display:flex;align-items:flex-start;gap:.6rem;font-size:.88rem;color:var(--text2);line-height:1.5}
+.compare-list li svg{width:16px;height:16px;flex-shrink:0;margin-top:2px}
+.compare-card:not(.pro) .compare-list li svg{color:var(--text3)}
+.compare-card.pro .compare-list li svg{color:var(--accent)}
+.btn-launch{display:inline-flex;align-items:center;gap:.45rem;padding:.7rem 1.5rem;font-weight:600;font-size:.88rem;border-radius:9px;transition:all .3s}
+.compare-card:not(.pro) .btn-launch{border:1px solid var(--border2);background:rgba(255,255,255,.03)}
+.compare-card:not(.pro) .btn-launch:hover{background:rgba(255,255,255,.06);transform:translateY(-1px)}
+.compare-card.pro .btn-launch{background:var(--accent2);color:#fff}
+.compare-card.pro .btn-launch:hover{background:var(--accent3);transform:translateY(-1px);box-shadow:0 6px 20px rgba(139,92,246,.25)}
+
+/* ─── FOOTER ─── */
+.footer{border-top:1px solid var(--border);padding:3rem 2.5rem;display:flex;align-items:center;justify-content:space-between;margin-top:4rem}
+.footer-left{display:flex;align-items:center;gap:.6rem;font-size:.82rem;color:var(--text3)}
+.footer-left svg{width:18px;height:18px;color:var(--text3)}
+.footer-links{display:flex;gap:1.5rem}
+.footer-links a{font-size:.8rem;color:var(--text3);transition:color .2s}
+.footer-links a:hover{color:var(--text)}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:900px){
+  .features-grid{grid-template-columns:1fr 1fr}
+  .compare-grid{grid-template-columns:1fr}
+  .nav-links{display:none}
+}
+@media(max-width:600px){
+  .features-grid{grid-template-columns:1fr}
+  .hero-actions{flex-direction:column;align-items:center}
+  .preview-canvas{height:260px}
+  .mock-panel{display:none}
+}
+
+/* ─── SCROLL ANIMATIONS ─── */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="nav-logo">
+    <svg viewBox="0 0 28 28" fill="none"><rect x="2" y="2" width="24" height="24" rx="6" stroke="currentColor" stroke-width="1.5" fill="rgba(139,92,246,.12)"/><path d="M8 20 L14 8 L20 20" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="12" r="2" fill="var(--accent)"/></svg>
+    <span>CanvasForge</span>
+  </div>
+  <div class="nav-links">
+    <a href="#features" data-i18n="nav_features">Features</a>
+    <a href="#editions" data-i18n="nav_editions">Editions</a>
+    <a href="https://github.com" data-i18n="nav_docs">Documentation</a>
+  </div>
+  <div class="nav-right">
+    <div class="lang-switch" id="langSwitch">
+      <button class="lang-btn" id="langBtn">
+        <span id="langLabel">EN</span>
+        <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <div class="lang-menu" id="langMenu">
+        <button data-lang="en" class="active">English</button>
+        <button data-lang="zh">中文</button>
+        <button data-lang="ja">日本語</button>
+        <button data-lang="ko">한국어</button>
+        <button data-lang="fr">Français</button>
+        <button data-lang="es">Español</button>
+      </div>
+    </div>
+    <a href="app-basic.html" class="btn-cta-sm" data-i18n="nav_launch">Launch App</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow g1"></div>
+  <div class="hero-glow g2"></div>
+  <div class="hero-glow g3"></div>
+  <div class="hero-badge"><span class="dot"></span> <span data-i18n="hero_badge">Digital Painting Reimagined</span></div>
+  <h1 data-i18n="hero_title">Where Ideas Become <em>Art</em></h1>
+  <p class="hero-sub" data-i18n="hero_sub">A professional-grade digital canvas with intuitive tools, advanced color science, and pixel-perfect precision — right in your browser.</p>
+  <div class="hero-actions">
+    <a href="app-pro.html" class="btn-primary">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M10 2L3 10l7 8 7-8-7-8z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2" fill="currentColor"/></svg>
+      <span data-i18n="hero_cta_pro">Professional Edition</span>
+    </a>
+    <a href="app-basic.html" class="btn-secondary">
+      <span data-i18n="hero_cta_basic">Basic Edition</span>
+      <svg viewBox="0 0 16 16" fill="none" width="16" height="16"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- PREVIEW -->
+<div class="preview-section">
+  <div class="preview-window reveal">
+    <div class="preview-bar">
+      <span class="preview-dot r"></span><span class="preview-dot y"></span><span class="preview-dot g"></span>
+      <span>CanvasForge Pro — Untitled.canvas</span>
+    </div>
+    <div class="preview-canvas">
+      <div class="preview-ui-mock">
+        <div class="mock-toolbar">
+          <div class="mock-tool active"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13L13 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div class="mock-tool"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/></svg></div>
+          <div class="mock-tool"><svg viewBox="0 0 16 16" fill="none"><rect x="3" y="3" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/></svg></div>
+          <div class="mock-tool"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12l2-5 3 3 3-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="mock-tool"><svg viewBox="0 0 16 16" fill="none"><path d="M2 14L6 2l4 8 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+        <div class="mock-canvas-area">
+          <div class="canvas-strokes">
+            <svg viewBox="0 0 800 420" fill="none">
+              <defs>
+                <linearGradient id="sg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5cf6" stop-opacity=".6"/><stop offset="100%" stop-color="#f43f5e" stop-opacity=".4"/></linearGradient>
+                <linearGradient id="sg2" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#14b8a6" stop-opacity=".5"/><stop offset="100%" stop-color="#f59e0b" stop-opacity=".3"/></linearGradient>
+              </defs>
+              <path d="M100 350 Q200 100 350 200 T600 150 T750 300" stroke="url(#sg1)" stroke-width="3" fill="none" stroke-linecap="round">
+                <animate attributeName="stroke-dasharray" from="0 2000" to="2000 0" dur="3s" fill="freeze"/>
+              </path>
+              <path d="M80 200 Q250 350 400 180 T700 250" stroke="url(#sg2)" stroke-width="2.5" fill="none" stroke-linecap="round">
+                <animate attributeName="stroke-dasharray" from="0 2000" to="2000 0" dur="3.5s" begin=".5s" fill="freeze"/>
+              </path>
+              <circle cx="350" cy="200" r="60" fill="rgba(139,92,246,.06)" stroke="rgba(139,92,246,.2)" stroke-width="1">
+                <animate attributeName="r" from="0" to="60" dur="1s" begin="1s" fill="freeze"/>
+                <animate attributeName="opacity" from="0" to="1" dur="1s" begin="1s" fill="freeze"/>
+              </circle>
+              <circle cx="550" cy="170" r="35" fill="rgba(244,63,94,.06)" stroke="rgba(244,63,94,.2)" stroke-width="1">
+                <animate attributeName="r" from="0" to="35" dur=".8s" begin="1.5s" fill="freeze"/>
+                <animate attributeName="opacity" from="0" to="1" dur=".8s" begin="1.5s" fill="freeze"/>
+              </circle>
+            </svg>
+          </div>
+        </div>
+        <div class="mock-panel">
+          <div class="mock-panel-title" data-i18n="mock_colors">Colors</div>
+          <div class="mock-colors">
+            <div class="mock-color" style="background:#8b5cf6"></div>
+            <div class="mock-color" style="background:#f43f5e"></div>
+            <div class="mock-color" style="background:#14b8a6"></div>
+            <div class="mock-color" style="background:#f59e0b"></div>
+            <div class="mock-color" style="background:#3b82f6"></div>
+            <div class="mock-color" style="background:#ef4444"></div>
+            <div class="mock-color" style="background:#22c55e"></div>
+            <div class="mock-color" style="background:#eab308"></div>
+            <div class="mock-color" style="background:#ec4899"></div>
+            <div class="mock-color" style="background:#06b6d4"></div>
+            <div class="mock-color" style="background:#a855f7"></div>
+            <div class="mock-color" style="background:#f97316"></div>
+          </div>
+          <div class="mock-panel-title" data-i18n="mock_brush_size">Brush Size</div>
+          <div class="mock-slider"></div>
+          <div class="mock-panel-title" data-i18n="mock_opacity">Opacity</div>
+          <div class="mock-slider" style="margin-bottom:0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="features-header reveal">
+    <div class="section-label" data-i18n="features_label">Core Capabilities</div>
+    <h2 class="section-title" data-i18n="features_title">Everything You Need to Create</h2>
+    <p class="section-desc" data-i18n="features_desc">Built from the ground up for artists, designers, and anyone who loves to draw.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-icon purple">🎨</div>
+      <h3 data-i18n="f1_title">Advanced Color System</h3>
+      <p data-i18n="f1_desc">HSL, RGB, and HEX with real-time mixing. Save custom palettes and access a curated color library.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon rose">🖌️</div>
+      <h3 data-i18n="f2_title">Diverse Brush Engine</h3>
+      <p data-i18n="f2_desc">Pencil, pen, watercolor, airbrush, marker and more — each with customizable pressure, size and flow.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon teal">♻️</div>
+      <h3 data-i18n="f3_title">Unlimited Undo</h3>
+      <p data-i18n="f3_desc">Full history stack with non-destructive editing. Step backward and forward through every stroke.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon warm">📐</div>
+      <h3 data-i18n="f4_title">Precision Grid &amp; Guides</h3>
+      <p data-i18n="f4_desc">Snap-to-grid, ruler overlays, and alignment guides for pixel-perfect compositions.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon purple">💾</div>
+      <h3 data-i18n="f5_title">Export Anywhere</h3>
+      <p data-i18n="f5_desc">Save as PNG, JPEG, or SVG. Adjust quality and resolution for web, print, or social media.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon rose">🌐</div>
+      <h3 data-i18n="f6_title">Multi-Language</h3>
+      <p data-i18n="f6_desc">Full interface localization in English, Chinese, Japanese, Korean, French and Spanish.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARE -->
+<section class="compare" id="editions">
+  <div class="compare-header reveal">
+    <div class="section-label" data-i18n="compare_label">Choose Your Edition</div>
+    <h2 class="section-title" data-i18n="compare_title">Basic or Professional</h2>
+    <p class="section-desc" data-i18n="compare_desc">Start simple or go all-in. Both editions run entirely in your browser.</p>
+  </div>
+  <div class="compare-grid">
+    <div class="compare-card reveal">
+      <span class="compare-tag" data-i18n="basic_tag">BASIC</span>
+      <h3 data-i18n="basic_title">Essential Canvas</h3>
+      <p data-i18n="basic_desc">Clean and straightforward tools for quick sketches and everyday drawing.</p>
+      <ul class="compare-list">
+        <li><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="basic_f1">Standard brush, eraser, and shapes</span></li>
+        <li><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="basic_f2">24-color preset palette</span></li>
+        <li><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="basic_f3">Adjustable brush size</span></li>
+        <li><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="basic_f4">Undo / Redo and PNG export</span></li>
+      </ul>
+      <a href="app-basic.html" class="btn-launch" data-i18n="basic_launch">Open Basic →</a>
+    </div>
+    <div class="compare-card pro reveal">
+      <span class="compare-tag" data-i18n="pro_tag">PROFESSIONAL</span>
+      <h3 data-i18n="pro_title">Full Studio</h3>
+      <p data-i18n="pro_desc">Complete toolbox with advanced color science, custom brushes, and layer-like workflows.</p>
+      <ul class="compare-list">
+        <li><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pro_f1">8+ brush types with flow & pressure</span></li>
+        <li><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pro_f2">HSL / RGB / HEX color picker</span></li>
+        <li><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pro_f3">Symmetry, grid, and guide overlays</span></li>
+        <li><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pro_f4">Custom palette saving & import</span></li>
+        <li><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pro_f5">Multi-format export (PNG/JPEG/SVG)</span></li>
+      </ul>
+      <a href="app-pro.html" class="btn-launch" data-i18n="pro_launch">Open Pro →</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-left">
+    <svg viewBox="0 0 28 28" fill="none"><rect x="2" y="2" width="24" height="24" rx="6" stroke="currentColor" stroke-width="1.5" fill="rgba(139,92,246,.08)"/><path d="M8 20L14 8l6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span>© 2026 CanvasForge</span>
+  </div>
+  <div class="footer-links">
+    <a href="#" data-i18n="footer_privacy">Privacy</a>
+    <a href="#" data-i18n="footer_terms">Terms</a>
+    <a href="#" data-i18n="footer_contact">Contact</a>
+  </div>
+</footer>
+
+<script>
+/* ─── i18n ─── */
+const LANG = {
+  en:{
+    nav_features:'Features',nav_editions:'Editions',nav_docs:'Documentation',nav_launch:'Launch App',
+    hero_badge:'Digital Painting Reimagined',hero_title:'Where Ideas Become <em>Art</em>',
+    hero_sub:'A professional-grade digital canvas with intuitive tools, advanced color science, and pixel-perfect precision — right in your browser.',
+    hero_cta_pro:'Professional Edition',hero_cta_basic:'Basic Edition',
+    mock_colors:'Colors',mock_brush_size:'Brush Size',mock_opacity:'Opacity',
+    features_label:'Core Capabilities',features_title:'Everything You Need to Create',
+    features_desc:'Built from the ground up for artists, designers, and anyone who loves to draw.',
+    f1_title:'Advanced Color System',f1_desc:'HSL, RGB, and HEX with real-time mixing. Save custom palettes and access a curated color library.',
+    f2_title:'Diverse Brush Engine',f2_desc:'Pencil, pen, watercolor, airbrush, marker and more — each with customizable pressure, size and flow.',
+    f3_title:'Unlimited Undo',f3_desc:'Full history stack with non-destructive editing. Step backward and forward through every stroke.',
+    f4_title:'Precision Grid & Guides',f4_desc:'Snap-to-grid, ruler overlays, and alignment guides for pixel-perfect compositions.',
+    f5_title:'Export Anywhere',f5_desc:'Save as PNG, JPEG, or SVG. Adjust quality and resolution for web, print, or social media.',
+    f6_title:'Multi-Language',f6_desc:'Full interface localization in English, Chinese, Japanese, Korean, French and Spanish.',
+    compare_label:'Choose Your Edition',compare_title:'Basic or Professional',
+    compare_desc:'Start simple or go all-in. Both editions run entirely in your browser.',
+    basic_tag:'BASIC',basic_title:'Essential Canvas',basic_desc:'Clean and straightforward tools for quick sketches and everyday drawing.',
+    basic_f1:'Standard brush, eraser, and shapes',basic_f2:'24-color preset palette',basic_f3:'Adjustable brush size',basic_f4:'Undo / Redo and PNG export',basic_launch:'Open Basic →',
+    pro_tag:'PROFESSIONAL',pro_title:'Full Studio',pro_desc:'Complete toolbox with advanced color science, custom brushes, and layer-like workflows.',
+    pro_f1:'8+ brush types with flow & pressure',pro_f2:'HSL / RGB / HEX color picker',pro_f3:'Symmetry, grid, and guide overlays',pro_f4:'Custom palette saving & import',pro_f5:'Multi-format export (PNG/JPEG/SVG)',pro_launch:'Open Pro →',
+    footer_privacy:'Privacy',footer_terms:'Terms',footer_contact:'Contact'
+  },
+  zh:{
+    nav_features:'功能',nav_editions:'版本',nav_docs:'文档',nav_launch:'启动应用',
+    hero_badge:'数字绘画 · 全新定义',hero_title:'让灵感化为<em>艺术</em>',
+    hero_sub:'专业级数字画布，搭载直觉化工具、先进色彩科学和像素级精度——直接在浏览器中运行。',
+    hero_cta_pro:'专业版',hero_cta_basic:'基础版',
+    mock_colors:'颜色',mock_brush_size:'画笔大小',mock_opacity:'透明度',
+    features_label:'核心能力',features_title:'创作所需 · 一应俱全',
+    features_desc:'专为艺术家、设计师和所有热爱绘画的人而打造。',
+    f1_title:'高级色彩系统',f1_desc:'HSL、RGB、HEX 实时混色，支持自定义调色板保存和精选颜色库。',
+    f2_title:'多元画笔引擎',f2_desc:'铅笔、钢笔、水彩、喷枪、马克笔等，均支持自定义压感、大小和流量。',
+    f3_title:'无限撤销',f3_desc:'完整历史记录栈与无损编辑，在每一笔之间自由前进和后退。',
+    f4_title:'精确网格与辅助线',f4_desc:'吸附网格、标尺叠层和对齐辅助线，实现像素级精准构图。',
+    f5_title:'随处导出',f5_desc:'保存为 PNG、JPEG 或 SVG，可调节质量和分辨率以适配网页、印刷或社交媒体。',
+    f6_title:'多语言支持',f6_desc:'完整界面本地化：英语、中文、日语、韩语、法语和西班牙语。',
+    compare_label:'选择您的版本',compare_title:'基础版或专业版',
+    compare_desc:'从简洁起步或全力以赴，两个版本均完全在浏览器中运行。',
+    basic_tag:'基础版',basic_title:'基本画布',basic_desc:'简洁直观的工具，适合快速草图和日常绘画。',
+    basic_f1:'标准画笔、橡皮擦和形状工具',basic_f2:'24色预设调色板',basic_f3:'可调画笔粗细',basic_f4:'撤销/重做与PNG导出',basic_launch:'打开基础版 →',
+    pro_tag:'专业版',pro_title:'完整工作室',pro_desc:'配备高级色彩科学、自定义画笔和类图层工作流的完整工具箱。',
+    pro_f1:'8种以上画笔类型，含流量与压感',pro_f2:'HSL / RGB / HEX 取色器',pro_f3:'对称、网格和辅助线叠层',pro_f4:'自定义调色板保存与导入',pro_f5:'多格式导出 (PNG/JPEG/SVG)',pro_launch:'打开专业版 →',
+    footer_privacy:'隐私政策',footer_terms:'使用条款',footer_contact:'联系我们'
+  },
+  ja:{
+    nav_features:'機能',nav_editions:'エディション',nav_docs:'ドキュメント',nav_launch:'アプリ起動',
+    hero_badge:'デジタルペイントの再定義',hero_title:'アイデアを<em>アート</em>に',
+    hero_sub:'直感的ツール、高度な色彩科学、ピクセル単位の精密さを備えたプロ仕様のデジタルキャンバス——ブラウザで直接。',
+    hero_cta_pro:'プロ版',hero_cta_basic:'ベーシック版',
+    mock_colors:'カラー',mock_brush_size:'ブラシサイズ',mock_opacity:'不透明度',
+    features_label:'主な機能',features_title:'創作に必要なすべて',
+    features_desc:'アーティスト、デザイナー、絵を描くすべての人のために一から構築。',
+    f1_title:'高度なカラーシステム',f1_desc:'HSL、RGB、HEXによるリアルタイムミキシング。カスタムパレットの保存と厳選カラーライブラリ。',
+    f2_title:'多彩なブラシエンジン',f2_desc:'鉛筆、ペン、水彩、エアブラシ、マーカーなど——筆圧・サイズ・フローのカスタマイズ可能。',
+    f3_title:'無制限のアンドゥ',f3_desc:'完全な履歴スタックと非破壊編集。すべてのストロークを自由に前後移動。',
+    f4_title:'精密グリッドとガイド',f4_desc:'グリッドスナップ、ルーラーオーバーレイ、整列ガイドでピクセル単位の構図を実現。',
+    f5_title:'どこでもエクスポート',f5_desc:'PNG、JPEG、SVGで保存。Web、印刷、SNS向けに品質と解像度を調整可能。',
+    f6_title:'多言語対応',f6_desc:'英語、中国語、日本語、韓国語、フランス語、スペイン語の完全UIローカライズ。',
+    compare_label:'エディションを選択',compare_title:'ベーシックまたはプロ',
+    compare_desc:'シンプルに始めるか、フル装備で。どちらもブラウザで完全動作。',
+    basic_tag:'ベーシック',basic_title:'エッセンシャルキャンバス',basic_desc:'スケッチや日常のお絵描きに最適なシンプルツール。',
+    basic_f1:'標準ブラシ、消しゴム、シェイプ',basic_f2:'24色プリセットパレット',basic_f3:'ブラシサイズ調整',basic_f4:'アンドゥ / リドゥとPNGエクスポート',basic_launch:'ベーシック版を開く →',
+    pro_tag:'プロ',pro_title:'フルスタジオ',pro_desc:'高度な色彩科学、カスタムブラシ、レイヤーワークフローを備えた完全ツールボックス。',
+    pro_f1:'8種以上のブラシ（フロー＆筆圧対応）',pro_f2:'HSL / RGB / HEX カラーピッカー',pro_f3:'対称・グリッド・ガイドオーバーレイ',pro_f4:'カスタムパレットの保存と読み込み',pro_f5:'マルチフォーマットエクスポート',pro_launch:'プロ版を開く →',
+    footer_privacy:'プライバシー',footer_terms:'利用規約',footer_contact:'お問い合わせ'
+  },
+  ko:{
+    nav_features:'기능',nav_editions:'에디션',nav_docs:'문서',nav_launch:'앱 실행',
+    hero_badge:'디지털 페인팅의 재정의',hero_title:'아이디어를 <em>예술</em>로',
+    hero_sub:'직관적 도구, 고급 색상 과학, 픽셀 단위 정밀도를 갖춘 전문가급 디지털 캔버스 — 브라우저에서 바로.',
+    hero_cta_pro:'프로 에디션',hero_cta_basic:'기본 에디션',
+    mock_colors:'색상',mock_brush_size:'브러시 크기',mock_opacity:'불투명도',
+    features_label:'핵심 기능',features_title:'창작에 필요한 모든 것',features_desc:'아티스트, 디자이너, 그리고 그림을 사랑하는 모든 분을 위해.',
+    f1_title:'고급 색상 시스템',f1_desc:'HSL, RGB, HEX 실시간 혼합. 맞춤 팔레트 저장 및 큐레이션된 색상 라이브러리.',
+    f2_title:'다양한 브러시 엔진',f2_desc:'연필, 펜, 수채화, 에어브러시, 마커 등 — 압력, 크기, 흐름 맞춤 설정.',
+    f3_title:'무제한 실행 취소',f3_desc:'완전한 기록 스택과 비파괴 편집. 모든 획을 자유롭게 전후 이동.',
+    f4_title:'정밀 그리드 및 가이드',f4_desc:'그리드 스냅, 눈금자 오버레이, 정렬 가이드로 픽셀 완벽한 구도 실현.',
+    f5_title:'어디서나 내보내기',f5_desc:'PNG, JPEG, SVG로 저장. 웹, 인쇄, 소셜 미디어용 품질/해상도 조절.',
+    f6_title:'다국어 지원',f6_desc:'영어, 중국어, 일본어, 한국어, 프랑스어, 스페인어 전체 UI 지원.',
+    compare_label:'에디션 선택',compare_title:'기본 또는 프로',compare_desc:'간단하게 시작하거나 올인. 두 에디션 모두 브라우저에서 완전 작동.',
+    basic_tag:'기본',basic_title:'에센셜 캔버스',basic_desc:'빠른 스케치와 일상 드로잉에 적합한 깔끔한 도구.',
+    basic_f1:'표준 브러시, 지우개, 도형',basic_f2:'24색 프리셋 팔레트',basic_f3:'브러시 크기 조절',basic_f4:'실행 취소/다시 실행 및 PNG 내보내기',basic_launch:'기본 열기 →',
+    pro_tag:'프로',pro_title:'풀 스튜디오',pro_desc:'고급 색상 과학, 커스텀 브러시, 레이어 워크플로를 갖춘 완전한 도구 상자.',
+    pro_f1:'8가지 이상 브러시(흐름 및 압력)',pro_f2:'HSL / RGB / HEX 색상 선택기',pro_f3:'대칭, 그리드, 가이드 오버레이',pro_f4:'맞춤 팔레트 저장 및 불러오기',pro_f5:'다중 형식 내보내기 (PNG/JPEG/SVG)',pro_launch:'프로 열기 →',
+    footer_privacy:'개인정보',footer_terms:'이용약관',footer_contact:'문의'
+  },
+  fr:{
+    nav_features:'Fonctionnalités',nav_editions:'Éditions',nav_docs:'Documentation',nav_launch:'Lancer',
+    hero_badge:'Peinture numérique réinventée',hero_title:'Les idées deviennent <em>Art</em>',
+    hero_sub:'Un canevas numérique professionnel avec des outils intuitifs, une science des couleurs avancée et une précision au pixel — directement dans votre navigateur.',
+    hero_cta_pro:'Édition Pro',hero_cta_basic:'Édition Basic',
+    mock_colors:'Couleurs',mock_brush_size:'Taille du pinceau',mock_opacity:'Opacité',
+    features_label:'Capacités clés',features_title:'Tout pour créer',features_desc:'Conçu pour les artistes, designers et tous ceux qui aiment dessiner.',
+    f1_title:'Système couleur avancé',f1_desc:'HSL, RGB et HEX avec mélange en temps réel. Palettes personnalisées et bibliothèque de couleurs.',
+    f2_title:'Moteur de pinceaux',f2_desc:'Crayon, stylo, aquarelle, aérographe, marqueur — pression, taille et flux personnalisables.',
+    f3_title:'Annulation illimitée',f3_desc:'Historique complet avec édition non destructive. Naviguez trait par trait.',
+    f4_title:'Grilles et guides précis',f4_desc:'Accrochage grille, règles et guides d\'alignement pour des compositions parfaites.',
+    f5_title:'Exportation flexible',f5_desc:'PNG, JPEG ou SVG. Qualité et résolution ajustables pour le web, l\'impression ou les réseaux sociaux.',
+    f6_title:'Multilingue',f6_desc:'Localisation complète : anglais, chinois, japonais, coréen, français et espagnol.',
+    compare_label:'Choisissez votre édition',compare_title:'Basic ou Professionnel',compare_desc:'Commencez simple ou allez à fond. Les deux fonctionnent dans le navigateur.',
+    basic_tag:'BASIC',basic_title:'Canevas essentiel',basic_desc:'Des outils simples pour les croquis rapides et le dessin quotidien.',
+    basic_f1:'Pinceau, gomme et formes standard',basic_f2:'Palette de 24 couleurs',basic_f3:'Taille de pinceau ajustable',basic_f4:'Annuler / Rétablir et export PNG',basic_launch:'Ouvrir Basic →',
+    pro_tag:'PROFESSIONNEL',pro_title:'Studio complet',pro_desc:'Boîte à outils complète avec science des couleurs, pinceaux personnalisés et workflows avancés.',
+    pro_f1:'8+ types de pinceaux avec flux et pression',pro_f2:'Sélecteur HSL / RGB / HEX',pro_f3:'Symétrie, grille et guides',pro_f4:'Sauvegarde et import de palettes',pro_f5:'Export multi-format (PNG/JPEG/SVG)',pro_launch:'Ouvrir Pro →',
+    footer_privacy:'Confidentialité',footer_terms:'Conditions',footer_contact:'Contact'
+  },
+  es:{
+    nav_features:'Funciones',nav_editions:'Ediciones',nav_docs:'Documentación',nav_launch:'Iniciar',
+    hero_badge:'Pintura digital reinventada',hero_title:'Donde las ideas se hacen <em>Arte</em>',
+    hero_sub:'Un lienzo digital profesional con herramientas intuitivas, ciencia del color avanzada y precisión al píxel — directamente en tu navegador.',
+    hero_cta_pro:'Edición Pro',hero_cta_basic:'Edición Básica',
+    mock_colors:'Colores',mock_brush_size:'Tamaño del pincel',mock_opacity:'Opacidad',
+    features_label:'Capacidades clave',features_title:'Todo para crear',features_desc:'Diseñado para artistas, diseñadores y todos los que aman dibujar.',
+    f1_title:'Sistema de color avanzado',f1_desc:'HSL, RGB y HEX con mezcla en tiempo real. Paletas personalizadas y biblioteca de colores.',
+    f2_title:'Motor de pinceles',f2_desc:'Lápiz, pluma, acuarela, aerógrafo, marcador — presión, tamaño y flujo personalizables.',
+    f3_title:'Deshacer ilimitado',f3_desc:'Historial completo con edición no destructiva. Navega trazo por trazo.',
+    f4_title:'Cuadrícula y guías',f4_desc:'Ajuste a cuadrícula, reglas y guías de alineación para composiciones perfectas.',
+    f5_title:'Exportación flexible',f5_desc:'PNG, JPEG o SVG. Calidad y resolución ajustables para web, impresión o redes sociales.',
+    f6_title:'Multilingüe',f6_desc:'Localización completa: inglés, chino, japonés, coreano, francés y español.',
+    compare_label:'Elige tu edición',compare_title:'Básica o Profesional',compare_desc:'Empieza simple o ve con todo. Ambas ediciones corren en el navegador.',
+    basic_tag:'BÁSICA',basic_title:'Lienzo esencial',basic_desc:'Herramientas sencillas para bocetos rápidos y dibujo cotidiano.',
+    basic_f1:'Pincel estándar, borrador y formas',basic_f2:'Paleta de 24 colores',basic_f3:'Tamaño de pincel ajustable',basic_f4:'Deshacer / Rehacer y exportar PNG',basic_launch:'Abrir Básica →',
+    pro_tag:'PROFESIONAL',pro_title:'Estudio completo',pro_desc:'Caja de herramientas completa con ciencia del color, pinceles personalizados y flujos avanzados.',
+    pro_f1:'8+ tipos de pincel con flujo y presión',pro_f2:'Selector HSL / RGB / HEX',pro_f3:'Simetría, cuadrícula y guías',pro_f4:'Guardado e importación de paletas',pro_f5:'Exportación multiformato (PNG/JPEG/SVG)',pro_launch:'Abrir Pro →',
+    footer_privacy:'Privacidad',footer_terms:'Términos',footer_contact:'Contacto'
+  }
+};
+
+let currentLang='en';
+function setLang(lang){
+  currentLang=lang;
+  const d=LANG[lang]||LANG.en;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n');
+    if(d[k]) el.innerHTML=d[k];
+  });
+  document.querySelectorAll('.lang-menu button').forEach(b=>{
+    b.classList.toggle('active',b.dataset.lang===lang);
+  });
+  document.getElementById('langLabel').textContent=lang.toUpperCase();
+  document.documentElement.lang=lang;
+  localStorage.setItem('cf_lang',lang);
+}
+
+// Lang switch toggle
+const ls=document.getElementById('langSwitch');
+document.getElementById('langBtn').addEventListener('click',e=>{e.stopPropagation();ls.classList.toggle('open')});
+document.querySelectorAll('.lang-menu button').forEach(b=>{
+  b.addEventListener('click',()=>{setLang(b.dataset.lang);ls.classList.remove('open')});
+});
+document.addEventListener('click',()=>ls.classList.remove('open'));
+
+// Init lang
+const saved=localStorage.getItem('cf_lang');
+if(saved&&LANG[saved])setLang(saved);
+
+// Nav scroll
+window.addEventListener('scroll',()=>{document.getElementById('nav').classList.toggle('scrolled',window.scrollY>40)});
+
+// Reveal on scroll
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target)}})},{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

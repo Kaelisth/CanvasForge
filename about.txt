@@ -1,0 +1,22 @@
+CanvasForge — Digital Painting Studio
+
+CanvasForge is a browser-based drawing application built entirely with HTML, CSS, and JavaScript. It requires no installation, no server, and no external dependencies.
+
+The project ships two editions:
+
+Basic Edition provides a clean, focused canvas with essential tools — brush, eraser, shapes, fill, and eyedropper. A curated 24-color palette and simple size/opacity sliders make it ideal for quick sketches, wireframes, or casual drawing.
+
+Professional Edition delivers a complete creative studio. Its brush engine includes pencil, marker, airbrush, watercolor, and calligraphy modes, each with distinct rendering characteristics. The advanced color system supports HSL, RGB, and HEX input with a real-time saturation-value picker, hue strip, and alpha channel. Artists can build custom palettes and save them as JSON files. Brush parameters — size, opacity, flow, hardness, spacing — are independently adjustable with a live preview. Grid and symmetry overlays assist with composition. Export options include PNG, JPEG, and SVG.
+
+A premium landing page introduces both editions with scroll-triggered animations, an interactive UI mockup, feature comparison, and a dark, refined aesthetic.
+
+All interfaces support six languages — English, Chinese, Japanese, Korean, French, and Spanish — with instant switching and persistent preference storage.
+
+Technical highlights:
+- Canvas 2D API for all rendering
+- Flood fill algorithm for paint bucket tool
+- Undo/redo history stack (50-80 states)
+- CSS custom properties for consistent theming
+- Keyboard shortcuts for rapid tool switching
+
+CanvasForge proves that professional creative tools can live entirely in the browser, accessible to anyone with a web connection.

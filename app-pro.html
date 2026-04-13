@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CanvasForge — Professional Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0c0c10;--bg2:#111116;--bg3:#17171e;
+  --surface:#1c1c26;--surface2:#242430;--surface3:#2c2c3a;
+  --border:#252535;--border2:#333348;
+  --text:#e4e2ee;--text2:#9896a8;--text3:#6c6a7a;
+  --accent:#8b5cf6;--accent2:#a78bfa;--accent-dim:rgba(139,92,246,.12);
+  --rose:#f43f5e;--teal:#14b8a6;--amber:#f59e0b;
+  --font:'DM Sans',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+
+/* ─── TOP ─── */
+.topbar{height:40px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 .75rem;gap:.5rem;flex-shrink:0;z-index:20}
+.tb-logo{display:flex;align-items:center;gap:.35rem;font-weight:600;font-size:.78rem;color:var(--text);margin-right:.25rem}
+.tb-logo svg{width:16px;height:16px}
+.tb-tag{font-size:.55rem;text-transform:uppercase;letter-spacing:.1em;padding:.15rem .45rem;border-radius:3px;background:var(--accent-dim);color:var(--accent);font-weight:700}
+.tb-sep{width:1px;height:18px;background:var(--border);margin:0 .15rem}
+.tb-btn{display:flex;align-items:center;gap:.3rem;padding:.25rem .5rem;font-size:.7rem;color:var(--text2);border:none;border-radius:4px;background:none;cursor:pointer;font-family:inherit;transition:all .15s}
+.tb-btn:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.tb-btn svg{width:13px;height:13px}
+.tb-group{display:flex;gap:.15rem}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:.25rem}
+.lang-mini{position:relative}
+.lang-mini-menu{position:absolute;top:calc(100% + 4px);right:0;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.2rem;display:none;min-width:95px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:50}
+.lang-mini.open .lang-mini-menu{display:block}
+.lang-mini-menu button{display:block;width:100%;text-align:left;padding:.3rem .5rem;font-size:.7rem;border-radius:3px;background:none;border:none;color:var(--text2);cursor:pointer;font-family:inherit}
+.lang-mini-menu button:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.lang-mini-menu button.active{color:var(--accent)}
+
+/* ─── BODY ─── */
+.app-body{display:flex;flex:1;overflow:hidden}
+
+/* ─── LEFT TOOLBAR ─── */
+.toolbar{width:48px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:.5rem 0;gap:.2rem;flex-shrink:0;overflow-y:auto}
+.t-btn{width:34px;height:34px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;background:none;color:var(--text3);transition:all .15s;position:relative;flex-shrink:0}
+.t-btn:hover{background:rgba(255,255,255,.05);color:var(--text2)}
+.t-btn.active{background:var(--accent-dim);color:var(--accent)}
+.t-btn svg{width:16px;height:16px}
+.t-sep{width:24px;height:1px;background:var(--border);margin:.2rem 0;flex-shrink:0}
+
+/* ─── CANVAS ─── */
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
+canvas{display:block;cursor:crosshair;box-shadow:0 4px 40px rgba(0,0,0,.4)}
+
+/* ─── RIGHT PANELS ─── */
+.sidebar{width:260px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--surface2) transparent}
+.panel{border-bottom:1px solid var(--border)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:.55rem .7rem;cursor:pointer;user-select:none}
+.panel-head:hover{background:rgba(255,255,255,.015)}
+.panel-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-weight:600}
+.panel-head svg{width:12px;height:12px;color:var(--text3);transition:transform .2s}
+.panel.collapsed .panel-body{display:none}
+.panel.collapsed .panel-head svg{transform:rotate(-90deg)}
+.panel-body{padding:0 .7rem .65rem}
+
+/* Color picker */
+.color-main{display:flex;gap:.5rem;margin-bottom:.5rem}
+.sat-val-box{width:140px;height:110px;border-radius:6px;cursor:crosshair;position:relative;border:1px solid var(--border)}
+.sv-cursor{width:12px;height:12px;border:2px solid #fff;border-radius:50%;position:absolute;transform:translate(-50%,-50%);box-shadow:0 0 4px rgba(0,0,0,.5);pointer-events:none}
+.hue-strip{width:18px;height:110px;border-radius:4px;cursor:pointer;position:relative;border:1px solid var(--border);background:linear-gradient(to bottom,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+.hue-cursor{width:calc(100% + 4px);height:6px;border:2px solid #fff;border-radius:3px;position:absolute;left:-2px;transform:translateY(-50%);box-shadow:0 0 4px rgba(0,0,0,.5);pointer-events:none}
+.alpha-strip{width:18px;height:110px;border-radius:4px;cursor:pointer;position:relative;border:1px solid var(--border)}
+.alpha-cursor{width:calc(100% + 4px);height:6px;border:2px solid #fff;border-radius:3px;position:absolute;left:-2px;transform:translateY(-50%);box-shadow:0 0 4px rgba(0,0,0,.5);pointer-events:none}
+
+.color-inputs{display:flex;gap:.3rem;margin-bottom:.5rem;align-items:center}
+.color-mode-tabs{display:flex;gap:0;margin-bottom:.4rem}
+.cm-tab{padding:.2rem .5rem;font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;cursor:pointer;border:1px solid var(--border);background:none;color:var(--text3);font-family:inherit}
+.cm-tab:first-child{border-radius:4px 0 0 4px}.cm-tab:last-child{border-radius:0 4px 4px 0}
+.cm-tab.active{background:var(--accent-dim);color:var(--accent);border-color:rgba(139,92,246,.25)}
+.ci-group{display:flex;gap:.25rem;flex:1}
+.ci-field{display:flex;flex-direction:column;gap:.1rem;flex:1}
+.ci-field label{font-size:.55rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.ci-field input{width:100%;padding:.25rem .3rem;font-size:.72rem;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);outline:none;text-align:center}
+.ci-field input:focus{border-color:var(--accent)}
+.hex-input{display:flex;align-items:center;gap:.25rem}
+.hex-input label{font-size:.62rem;color:var(--text3);font-weight:600}
+.hex-input input{width:80px;padding:.25rem .3rem;font-size:.72rem;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);outline:none}
+.hex-input input:focus{border-color:var(--accent)}
+.cur-swatch{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);flex-shrink:0}
+
+/* Palette */
+.palette-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.p-swatch{aspect-ratio:1;border-radius:3px;cursor:pointer;border:1.5px solid transparent;transition:all .1s}
+.p-swatch:hover{transform:scale(1.15);z-index:1}
+.p-swatch.active{border-color:#fff}
+.palette-row{display:flex;gap:.3rem;margin-top:.4rem;align-items:center}
+.palette-row button{font-size:.6rem;padding:.2rem .45rem;border:1px solid var(--border);border-radius:3px;background:none;color:var(--text3);cursor:pointer;font-family:inherit;transition:all .15s}
+.palette-row button:hover{border-color:var(--border2);color:var(--text2)}
+
+/* Brush */
+.brush-types{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:.5rem}
+.br-btn{padding:.35rem .2rem;font-size:.62rem;text-align:center;border:1px solid var(--border);border-radius:5px;background:none;color:var(--text3);cursor:pointer;font-family:inherit;transition:all .15s;line-height:1.2}
+.br-btn:hover{border-color:var(--border2);color:var(--text2)}
+.br-btn.active{background:var(--accent-dim);border-color:rgba(139,92,246,.3);color:var(--accent)}
+.sl-row{display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem}
+.sl-row label{font-size:.62rem;color:var(--text3);min-width:42px;font-weight:500}
+.sl-row input[type=range]{flex:1;-webkit-appearance:none;height:4px;background:var(--surface2);border-radius:2px;outline:none}
+.sl-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg2)}
+.sl-row span{font-size:.62rem;color:var(--text3);min-width:24px;text-align:right;font-family:var(--mono)}
+.brush-preview{height:40px;background:var(--surface);border:1px solid var(--border);border-radius:5px;margin-top:.35rem;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.brush-preview canvas{width:100%;height:100%}
+
+/* Overlays */
+.overlay-toggles{display:flex;flex-direction:column;gap:.3rem}
+.ov-row{display:flex;align-items:center;gap:.5rem;font-size:.72rem;color:var(--text2)}
+.ov-row input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px}
+
+/* ─── BOTTOM ─── */
+.bottombar{height:26px;background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 .6rem;font-size:.62rem;color:var(--text3);gap:.8rem;flex-shrink:0;font-family:var(--mono)}
+.bottombar .sep{width:1px;height:14px;background:var(--border)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="tb-logo">
+    <svg viewBox="0 0 28 28" fill="none"><rect x="2" y="2" width="24" height="24" rx="6" stroke="currentColor" stroke-width="1.5" fill="rgba(139,92,246,.1)"/><path d="M8 20L14 8l6 12" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+    CanvasForge
+  </div>
+  <span class="tb-tag" data-i18n="tag">PRO</span>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <button class="tb-btn" id="undoBtn"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8h8a3 3 0 010 6H9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M6 5L3 8l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="undo">Undo</span></button>
+    <button class="tb-btn" id="redoBtn"><svg viewBox="0 0 16 16" fill="none"><path d="M13 8H5a3 3 0 000 6h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 5l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="redo">Redo</span></button>
+    <button class="tb-btn" id="clearBtn"><svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span data-i18n="clear">Clear</span></button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <button class="tb-btn" id="flipH"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v12M3 5l3 3-3 3M13 5l-3 3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="flip_h">Flip H</span></button>
+    <button class="tb-btn" id="flipV"><svg viewBox="0 0 16 16" fill="none"><path d="M2 8h12M5 3l3 3-3 3M5 13l3-3-3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="flip_v">Flip V</span></button>
+  </div>
+  <div class="tb-right">
+    <select id="exportFmt" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);font-size:.68rem;padding:.2rem .3rem;border-radius:4px;font-family:inherit;outline:none;cursor:pointer">
+      <option value="png">PNG</option><option value="jpeg">JPEG</option><option value="svg">SVG</option>
+    </select>
+    <button class="tb-btn" id="exportBtn" style="background:var(--accent-dim);color:var(--accent)"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 6l4-4 4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12v2h12v-2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span data-i18n="export">Export</span></button>
+    <div class="tb-sep"></div>
+    <a href="index.html" class="tb-btn"><svg viewBox="0 0 16 16" fill="none"><path d="M2 8l6-5 6 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 7v6h8V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></a>
+    <div class="lang-mini" id="langMini">
+      <button class="tb-btn" id="langToggle"><span id="langLabel">EN</span></button>
+      <div class="lang-mini-menu" id="langMenu">
+        <button data-lang="en" class="active">English</button>
+        <button data-lang="zh">中文</button>
+        <button data-lang="ja">日本語</button>
+        <button data-lang="ko">한국어</button>
+        <button data-lang="fr">Français</button>
+        <button data-lang="es">Español</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="app-body">
+  <!-- TOOLBAR -->
+  <div class="toolbar" id="toolbar">
+    <button class="t-btn active" data-tool="brush" title="Brush (B)"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13c1-2 2-3 4-4l4-5 2 2-5 4c-2 2-2 3-4 4-1 0-1-1-1-1z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+    <button class="t-btn" data-tool="pencil" title="Pencil (P)"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13l1-4 7-7 3 3-7 7-4 1z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="t-btn" data-tool="marker" title="Marker (M)"><svg viewBox="0 0 16 16" fill="none"><rect x="5" y="2" width="6" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M7 12v2h2v-2" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    <button class="t-btn" data-tool="airbrush" title="Airbrush (A)"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2"/><circle cx="8" cy="8" r="2" fill="currentColor" opacity=".4"/></svg></button>
+    <button class="t-btn" data-tool="watercolor" title="Watercolor (W)"><svg viewBox="0 0 16 16" fill="none"><path d="M8 3c2 3 4 5 4 7a4 4 0 01-8 0c0-2 2-4 4-7z" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    <button class="t-btn" data-tool="calligraphy" title="Calligraphy"><svg viewBox="0 0 16 16" fill="none"><path d="M4 14L12 2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    <div class="t-sep"></div>
+    <button class="t-btn" data-tool="eraser" title="Eraser (E)"><svg viewBox="0 0 16 16" fill="none"><path d="M5 13h8M4 11l6-6 3 3-6 6H4v-3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="t-btn" data-tool="smudge" title="Smudge"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13c3-1 4-3 6-6s3-3 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".6"/></svg></button>
+    <div class="t-sep"></div>
+    <button class="t-btn" data-tool="line" title="Line"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13L13 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+    <button class="t-btn" data-tool="rect" title="Rectangle"><svg viewBox="0 0 16 16" fill="none"><rect x="3" y="4" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    <button class="t-btn" data-tool="circle" title="Ellipse"><svg viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="8" rx="5" ry="4" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    <div class="t-sep"></div>
+    <button class="t-btn" data-tool="fill" title="Fill (G)"><svg viewBox="0 0 16 16" fill="none"><path d="M5 11l-2 3 3-2 6-6-1-1-6 6z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M13 12c1 2-1 3-1 3s-2-1-1-3l1-2 1 2z" fill="currentColor" opacity=".5"/></svg></button>
+    <button class="t-btn" data-tool="eyedropper" title="Eyedropper (I)"><svg viewBox="0 0 16 16" fill="none"><path d="M9 4l3 3M5 8l4 4-4 4H3v-2l7-7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="3" r="2" stroke="currentColor" stroke-width="1.2"/></svg></button>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area" id="canvasArea">
+    <canvas id="canvas" width="1000" height="660"></canvas>
+    <canvas id="gridCanvas" width="1000" height="660" style="position:absolute;pointer-events:none;display:none"></canvas>
+    <canvas id="symCanvas" width="1000" height="660" style="position:absolute;pointer-events:none;display:none"></canvas>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <!-- COLOR PICKER -->
+    <div class="panel" id="panelColor">
+      <div class="panel-head"><span class="panel-title" data-i18n="color_picker">Color Picker</span><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+      <div class="panel-body">
+        <div class="color-main">
+          <canvas id="svBox" width="140" height="110" class="sat-val-box"></canvas>
+          <div style="position:relative"><canvas id="hueStrip" width="18" height="110" class="hue-strip"></canvas><div class="hue-cursor" id="hueCursor"></div></div>
+          <div style="position:relative"><canvas id="alphaStrip" width="18" height="110" class="alpha-strip"></canvas><div class="alpha-cursor" id="alphaCursor"></div></div>
+        </div>
+        <div class="color-mode-tabs">
+          <button class="cm-tab active" data-mode="rgb">RGB</button>
+          <button class="cm-tab" data-mode="hsl">HSL</button>
+        </div>
+        <div class="ci-group" id="colorFields"></div>
+        <div style="display:flex;align-items:center;gap:.4rem;margin-top:.4rem">
+          <div class="hex-input"><label>HEX</label><input id="hexInput" value="#8B5CF6" maxlength="7"></div>
+          <div class="cur-swatch" id="curSwatch" style="background:#8b5cf6"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PALETTE -->
+    <div class="panel" id="panelPalette">
+      <div class="panel-head"><span class="panel-title" data-i18n="palette">Palette</span><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+      <div class="panel-body">
+        <div class="palette-grid" id="paletteGrid"></div>
+        <div class="palette-row">
+          <button id="addToPalette" data-i18n="add_color">+ Add</button>
+          <button id="clearPalette" data-i18n="clear_palette">Clear</button>
+          <button id="savePalette" data-i18n="save_palette">Save</button>
+          <button id="loadPalette" data-i18n="load_palette">Load</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRUSH -->
+    <div class="panel" id="panelBrush">
+      <div class="panel-head"><span class="panel-title" data-i18n="brush_settings">Brush Settings</span><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+      <div class="panel-body">
+        <div class="sl-row"><label data-i18n="size">Size</label><input type="range" min="1" max="100" value="6" id="sizeR"><span id="sizeV">6</span></div>
+        <div class="sl-row"><label data-i18n="opacity_l">Opacity</label><input type="range" min="5" max="100" value="100" id="opacR"><span id="opacV">100</span></div>
+        <div class="sl-row"><label data-i18n="flow">Flow</label><input type="range" min="5" max="100" value="80" id="flowR"><span id="flowV">80</span></div>
+        <div class="sl-row"><label data-i18n="hardness">Hard</label><input type="range" min="0" max="100" value="100" id="hardR"><span id="hardV">100</span></div>
+        <div class="sl-row"><label data-i18n="spacing">Space</label><input type="range" min="1" max="50" value="4" id="spaceR"><span id="spaceV">4</span></div>
+        <div class="brush-preview"><canvas id="brushPreview" width="220" height="36"></canvas></div>
+      </div>
+    </div>
+
+    <!-- OVERLAYS -->
+    <div class="panel" id="panelOverlay">
+      <div class="panel-head"><span class="panel-title" data-i18n="overlays">Overlays</span><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+      <div class="panel-body">
+        <div class="overlay-toggles">
+          <label class="ov-row"><input type="checkbox" id="gridToggle"><span data-i18n="show_grid">Grid</span></label>
+          <label class="ov-row"><input type="checkbox" id="symToggle"><span data-i18n="symmetry">Symmetry (V)</span></label>
+          <label class="ov-row"><input type="checkbox" id="symHToggle"><span data-i18n="symmetry_h">Symmetry (H)</span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM -->
+<div class="bottombar">
+  <span>1000 × 660</span>
+  <div class="sep"></div>
+  <span id="cursorPos">0, 0</span>
+  <div class="sep"></div>
+  <span id="toolLabel">Brush</span>
+  <span style="margin-left:auto" id="zoomLabel">100%</span>
+</div>
+
+<script>
+/* ═══════════════ i18n ═══════════════ */
+const I18N={
+  en:{tag:'PRO',undo:'Undo',redo:'Redo',clear:'Clear',export:'Export',flip_h:'Flip H',flip_v:'Flip V',color_picker:'Color Picker',palette:'Palette',brush_settings:'Brush Settings',overlays:'Overlays',size:'Size',opacity_l:'Opacity',flow:'Flow',hardness:'Hard',spacing:'Space',show_grid:'Grid',symmetry:'Symmetry (V)',symmetry_h:'Symmetry (H)',add_color:'+ Add',clear_palette:'Clear',save_palette:'Save',load_palette:'Load'},
+  zh:{tag:'专业版',undo:'撤销',redo:'重做',clear:'清除',export:'导出',flip_h:'水平翻转',flip_v:'垂直翻转',color_picker:'取色器',palette:'调色板',brush_settings:'画笔设置',overlays:'叠层',size:'大小',opacity_l:'透明度',flow:'流量',hardness:'硬度',spacing:'间距',show_grid:'网格',symmetry:'垂直对称',symmetry_h:'水平对称',add_color:'+ 添加',clear_palette:'清除',save_palette:'保存',load_palette:'加载'},
+  ja:{tag:'プロ',undo:'戻す',redo:'やり直し',clear:'クリア',export:'出力',flip_h:'左右反転',flip_v:'上下反転',color_picker:'カラーピッカー',palette:'パレット',brush_settings:'ブラシ設定',overlays:'オーバーレイ',size:'サイズ',opacity_l:'不透明度',flow:'フロー',hardness:'硬さ',spacing:'間隔',show_grid:'グリッド',symmetry:'対称(縦)',symmetry_h:'対称(横)',add_color:'+ 追加',clear_palette:'クリア',save_palette:'保存',load_palette:'読込'},
+  ko:{tag:'프로',undo:'실행 취소',redo:'다시 실행',clear:'지우기',export:'내보내기',flip_h:'좌우 반전',flip_v:'상하 반전',color_picker:'색상 선택',palette:'팔레트',brush_settings:'브러시 설정',overlays:'오버레이',size:'크기',opacity_l:'불투명도',flow:'흐름',hardness:'경도',spacing:'간격',show_grid:'그리드',symmetry:'대칭(세로)',symmetry_h:'대칭(가로)',add_color:'+ 추가',clear_palette:'지우기',save_palette:'저장',load_palette:'불러오기'},
+  fr:{tag:'PRO',undo:'Annuler',redo:'Rétablir',clear:'Effacer',export:'Exporter',flip_h:'Retourner H',flip_v:'Retourner V',color_picker:'Sélecteur',palette:'Palette',brush_settings:'Réglages pinceau',overlays:'Calques',size:'Taille',opacity_l:'Opacité',flow:'Flux',hardness:'Dureté',spacing:'Espace',show_grid:'Grille',symmetry:'Symétrie (V)',symmetry_h:'Symétrie (H)',add_color:'+ Ajouter',clear_palette:'Vider',save_palette:'Sauver',load_palette:'Charger'},
+  es:{tag:'PRO',undo:'Deshacer',redo:'Rehacer',clear:'Limpiar',export:'Exportar',flip_h:'Voltear H',flip_v:'Voltear V',color_picker:'Selector',palette:'Paleta',brush_settings:'Config. pincel',overlays:'Capas',size:'Tamaño',opacity_l:'Opacidad',flow:'Flujo',hardness:'Dureza',spacing:'Espacio',show_grid:'Cuadrícula',symmetry:'Simetría (V)',symmetry_h:'Simetría (H)',add_color:'+ Añadir',clear_palette:'Vaciar',save_palette:'Guardar',load_palette:'Cargar'}
+};
+let lang='en';
+function setLang(l){lang=l;const d=I18N[l]||I18N.en;document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n');if(d[k])el.textContent=d[k]});document.querySelectorAll('#langMenu button').forEach(b=>b.classList.toggle('active',b.dataset.lang===l));document.getElementById('langLabel').textContent=l.toUpperCase();localStorage.setItem('cf_lang',l)}
+const lm=document.getElementById('langMini');
+document.getElementById('langToggle').addEventListener('click',e=>{e.stopPropagation();lm.classList.toggle('open')});
+document.querySelectorAll('#langMenu button').forEach(b=>b.addEventListener('click',()=>{setLang(b.dataset.lang);lm.classList.remove('open')}));
+document.addEventListener('click',()=>lm.classList.remove('open'));
+const sL=localStorage.getItem('cf_lang');if(sL&&I18N[sL])setLang(sL);
+
+/* Panel collapse */
+document.querySelectorAll('.panel-head').forEach(h=>h.addEventListener('click',()=>h.parentElement.classList.toggle('collapsed')));
+
+/* ═══════════════ COLOR ═══════════════ */
+let H=265,S=63,V=96,A=1;
+let colorMode='rgb';
+function hsvToRgb(h,s,v){s/=100;v/=100;const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let r,g,b;if(h<60)[r,g,b]=[c,x,0];else if(h<120)[r,g,b]=[x,c,0];else if(h<180)[r,g,b]=[0,c,x];else if(h<240)[r,g,b]=[0,x,c];else if(h<300)[r,g,b]=[x,0,c];else[r,g,b]=[c,0,x];return[Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)]}
+function rgbToHsv(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;if(d){if(mx===r)h=60*((g-b)/d%6);else if(mx===g)h=60*((b-r)/d+2);else h=60*((r-g)/d+4)}if(h<0)h+=360;return[Math.round(h),mx?Math.round(d/mx*100):0,Math.round(mx*100)]}
+function rgbToHsl(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn;let h=0,s=0;if(d){s=l>.5?d/(2-mx-mn):d/(mx+mn);if(mx===r)h=(g-b)/d+(g<b?6:0);else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60}return[Math.round(h),Math.round(s*100),Math.round(l*100)]}
+function toHex(r,g,b){return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('')}
+function hexToRgb(h){const v=parseInt(h.replace('#',''),16);return[(v>>16)&255,(v>>8)&255,v&255]}
+function getCurColor(){const[r,g,b]=hsvToRgb(H,S,V);return{r,g,b,a:A,hex:toHex(r,g,b)}}
+
+/* SV Box */
+const svBox=document.getElementById('svBox'),svCtx=svBox.getContext('2d');
+function drawSV(){const w=svBox.width,h=svBox.height;svCtx.clearRect(0,0,w,h);
+  const hue=`hsl(${H},100%,50%)`;
+  const gH=svCtx.createLinearGradient(0,0,w,0);gH.addColorStop(0,'#fff');gH.addColorStop(1,hue);svCtx.fillStyle=gH;svCtx.fillRect(0,0,w,h);
+  const gV=svCtx.createLinearGradient(0,0,0,h);gV.addColorStop(0,'transparent');gV.addColorStop(1,'#000');svCtx.fillStyle=gV;svCtx.fillRect(0,0,w,h)}
+drawSV();
+
+function svFromMouse(e){const r=svBox.getBoundingClientRect();S=Math.max(0,Math.min(100,((e.clientX-r.left)/r.width)*100));V=Math.max(0,Math.min(100,(1-(e.clientY-r.top)/r.height)*100));updateAll()}
+let svDrag=false;
+svBox.addEventListener('mousedown',e=>{svDrag=true;svFromMouse(e)});
+window.addEventListener('mousemove',e=>{if(svDrag)svFromMouse(e)});
+window.addEventListener('mouseup',()=>svDrag=false);
+
+/* Hue */
+const hueStrip=document.getElementById('hueStrip'),hueCtx=hueStrip.getContext('2d');
+function drawHue(){const g=hueCtx.createLinearGradient(0,0,0,hueStrip.height);for(let i=0;i<=6;i++)g.addColorStop(i/6,['#f00','#ff0','#0f0','#0ff','#00f','#f0f','#f00'][i]);hueCtx.fillStyle=g;hueCtx.fillRect(0,0,hueStrip.width,hueStrip.height)}
+drawHue();
+let hueDrag=false;
+function hueFromMouse(e){const r=hueStrip.getBoundingClientRect();H=Math.max(0,Math.min(360,((e.clientY-r.top)/r.height)*360));updateAll()}
+hueStrip.addEventListener('mousedown',e=>{hueDrag=true;hueFromMouse(e)});
+window.addEventListener('mousemove',e=>{if(hueDrag)hueFromMouse(e)});
+window.addEventListener('mouseup',()=>hueDrag=false);
+
+/* Alpha */
+const alphaStrip=document.getElementById('alphaStrip'),alphaCtx=alphaStrip.getContext('2d');
+function drawAlpha(){const c=getCurColor();alphaCtx.clearRect(0,0,18,110);
+  // checkerboard
+  for(let y=0;y<110;y+=6)for(let x=0;x<18;x+=6){alphaCtx.fillStyle=(x/6+y/6)%2?'#333':'#555';alphaCtx.fillRect(x,y,6,6)}
+  const g=alphaCtx.createLinearGradient(0,0,0,110);g.addColorStop(0,c.hex);g.addColorStop(1,'transparent');alphaCtx.fillStyle=g;alphaCtx.fillRect(0,0,18,110)}
+let alphaDrag=false;
+function alphaFromMouse(e){const r=alphaStrip.getBoundingClientRect();A=Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height));A=Math.round(A*100)/100;updateAll()}
+alphaStrip.addEventListener('mousedown',e=>{alphaDrag=true;alphaFromMouse(e)});
+window.addEventListener('mousemove',e=>{if(alphaDrag)alphaFromMouse(e)});
+window.addEventListener('mouseup',()=>alphaDrag=false);
+
+/* Color fields */
+const colorFields=document.getElementById('colorFields');
+function buildFields(){
+  const c=getCurColor();
+  if(colorMode==='rgb'){
+    colorFields.innerHTML=`<div class="ci-field"><label>R</label><input id="cfR" value="${c.r}" type="number" min="0" max="255"></div><div class="ci-field"><label>G</label><input id="cfG" value="${c.g}" type="number" min="0" max="255"></div><div class="ci-field"><label>B</label><input id="cfB" value="${c.b}" type="number" min="0" max="255"></div>`;
+    ['cfR','cfG','cfB'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{const r=+document.getElementById('cfR').value,g=+document.getElementById('cfG').value,b=+document.getElementById('cfB').value;[H,S,V]=rgbToHsv(r,g,b);updateAll()}));
+  } else {
+    const[h,s,l]=rgbToHsl(c.r,c.g,c.b);
+    colorFields.innerHTML=`<div class="ci-field"><label>H</label><input id="cfH" value="${h}" type="number" min="0" max="360"></div><div class="ci-field"><label>S</label><input id="cfS" value="${s}" type="number" min="0" max="100"></div><div class="ci-field"><label>L</label><input id="cfL" value="${l}" type="number" min="0" max="100"></div>`;
+  }
+}
+buildFields();
+document.querySelectorAll('.cm-tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.cm-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');colorMode=t.dataset.mode;buildFields()}));
+document.getElementById('hexInput').addEventListener('change',e=>{try{const[r,g,b]=hexToRgb(e.target.value);[H,S,V]=rgbToHsv(r,g,b);updateAll()}catch(ex){}});
+
+function updateAll(){
+  drawSV();drawAlpha();
+  const c=getCurColor();
+  document.getElementById('curSwatch').style.background=c.hex;
+  document.getElementById('hexInput').value=c.hex.toUpperCase();
+  document.getElementById('hueCursor').style.top=`${(H/360)*110}px`;
+  document.getElementById('alphaCursor').style.top=`${(1-A)*110}px`;
+  buildFields();drawBrushPreview();
+}
+updateAll();
+
+/* ═══════════════ PALETTE ═══════════════ */
+const DEFAULT_PAL=['#1a1a2e','#16213e','#0f3460','#533483','#e94560','#f43f5e','#ff6b6b','#ee5a24','#ffa502','#ffc048','#ffdd59','#2ed573','#26de81','#0be881','#18dcff','#4bcffa','#3b82f6','#7d5fff','#8b5cf6','#a78bfa','#c084fc','#ec4899','#f472b6','#f9a8d4','#ffffff','#d1d5db','#9ca3af','#6b7280','#404040','#1a1a1a'];
+let palette=[...DEFAULT_PAL];
+const pg=document.getElementById('paletteGrid');
+function renderPalette(){
+  pg.innerHTML='';
+  palette.forEach((c,i)=>{const d=document.createElement('div');d.className='p-swatch';d.style.background=c;d.addEventListener('click',()=>{const[r,g,b]=hexToRgb(c);[H,S,V]=rgbToHsv(r,g,b);updateAll()});pg.appendChild(d)});
+}
+renderPalette();
+document.getElementById('addToPalette').addEventListener('click',()=>{palette.push(getCurColor().hex);renderPalette()});
+document.getElementById('clearPalette').addEventListener('click',()=>{palette=[...DEFAULT_PAL];renderPalette()});
+document.getElementById('savePalette').addEventListener('click',()=>{const b=new Blob([JSON.stringify(palette)],{type:'application/json'});const a=document.createElement('a');a.download='palette.json';a.href=URL.createObjectURL(b);a.click()});
+document.getElementById('loadPalette').addEventListener('click',()=>{const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{palette=JSON.parse(ev.target.result);renderPalette()}catch(ex){}};r.readAsText(f)};inp.click()});
+
+/* ═══════════════ CANVAS ═══════════════ */
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+let drawing=false,currentTool='brush',lastX,lastY;
+let history=[],historyIdx=-1;
+saveState();
+
+function saveState(){history=history.slice(0,historyIdx+1);history.push(canvas.toDataURL());historyIdx=history.length-1;if(history.length>80){history.shift();historyIdx--}}
+function restoreState(i){const img=new Image();img.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0)};img.src=history[i]}
+
+document.getElementById('undoBtn').addEventListener('click',()=>{if(historyIdx>0){historyIdx--;restoreState(historyIdx)}});
+document.getElementById('redoBtn').addEventListener('click',()=>{if(historyIdx<history.length-1){historyIdx++;restoreState(historyIdx)}});
+document.getElementById('clearBtn').addEventListener('click',()=>{ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);saveState()});
+
+/* Sliders */
+const sR=document.getElementById('sizeR'),oR=document.getElementById('opacR'),fR=document.getElementById('flowR'),hR=document.getElementById('hardR'),spR=document.getElementById('spaceR');
+const sV=document.getElementById('sizeV'),oV=document.getElementById('opacV'),fV=document.getElementById('flowV'),hV=document.getElementById('hardV'),spV=document.getElementById('spaceV');
+[sR,oR,fR,hR,spR].forEach((r,i)=>r.addEventListener('input',()=>{[sV,oV,fV,hV,spV][i].textContent=r.value;drawBrushPreview()}));
+
+/* Brush preview */
+const bpCanvas=document.getElementById('brushPreview'),bpCtx=bpCanvas.getContext('2d');
+function drawBrushPreview(){
+  bpCtx.clearRect(0,0,220,36);
+  const c=getCurColor();
+  bpCtx.globalAlpha=+oR.value/100;
+  bpCtx.strokeStyle=c.hex;
+  bpCtx.lineWidth=Math.min(+sR.value,20);
+  bpCtx.lineCap='round';bpCtx.lineJoin='round';
+  bpCtx.beginPath();
+  for(let x=20;x<200;x++){bpCtx.lineTo(x,18+Math.sin((x-20)*0.08)*10)}
+  bpCtx.stroke();bpCtx.globalAlpha=1;
+}
+drawBrushPreview();
+
+/* Tools */
+document.querySelectorAll('.t-btn[data-tool]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.t-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentTool=b.dataset.tool;document.getElementById('toolLabel').textContent=b.getAttribute('title').replace(/ \(.\)/,'');canvas.style.cursor=currentTool==='eyedropper'?'copy':currentTool==='fill'?'cell':'crosshair'}));
+
+let tempCanvas,tempCtx;
+function getTempCanvas(){if(!tempCanvas){tempCanvas=document.createElement('canvas');tempCanvas.width=canvas.width;tempCanvas.height=canvas.height;tempCtx=tempCanvas.getContext('2d')}tempCtx.clearRect(0,0,tempCanvas.width,tempCanvas.height);tempCtx.drawImage(canvas,0,0);return tempCanvas}
+
+function getPos(e){const r=canvas.getBoundingClientRect();return[((e.clientX-r.left)/r.width)*canvas.width,((e.clientY-r.top)/r.height)*canvas.height]}
+
+const symV=()=>document.getElementById('symToggle').checked;
+const symH=()=>document.getElementById('symHToggle').checked;
+
+function strokeAt(x1,y1,x2,y2){
+  const c=getCurColor();const size=+sR.value;const flow=+fR.value/100;const hard=+hR.value/100;
+  ctx.globalAlpha=(+oR.value/100)*flow;
+  ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=size;
+
+  if(currentTool==='eraser'){ctx.globalCompositeOperation='destination-out'}
+  else if(currentTool==='marker'){ctx.globalCompositeOperation='multiply';ctx.globalAlpha*=0.3}
+  else{ctx.globalCompositeOperation='source-over'}
+
+  ctx.strokeStyle=`rgba(${c.r},${c.g},${c.b},${A})`;
+
+  function line(fx1,fy1,fx2,fy2){ctx.beginPath();ctx.moveTo(fx1,fy1);ctx.lineTo(fx2,fy2);ctx.stroke()}
+
+  if(currentTool==='airbrush'){
+    const dots=Math.max(5,size);
+    for(let i=0;i<dots;i++){const ox=(Math.random()-.5)*size,oy=(Math.random()-.5)*size;ctx.globalAlpha=(+oR.value/100)*flow*0.15;ctx.beginPath();ctx.arc(x2+ox,y2+oy,Math.random()*2+1,0,Math.PI*2);ctx.fill()}
+  } else if(currentTool==='watercolor'){
+    ctx.globalAlpha=(+oR.value/100)*flow*0.12;
+    for(let i=0;i<3;i++){const ox=(Math.random()-.5)*size*0.4,oy=(Math.random()-.5)*size*0.4;ctx.lineWidth=size*(0.8+Math.random()*0.4);line(x1+ox,y1+oy,x2+ox,y2+oy)}
+  } else if(currentTool==='calligraphy'){
+    ctx.lineWidth=size*0.3;const angle=Math.PI/4;const dx=Math.cos(angle)*size*0.5,dy=Math.sin(angle)*size*0.5;ctx.beginPath();ctx.moveTo(x1-dx,y1-dy);ctx.lineTo(x2-dx,y2-dy);ctx.lineTo(x2+dx,y2+dy);ctx.lineTo(x1+dx,y1+dy);ctx.closePath();ctx.fill()
+  } else if(currentTool==='pencil'){
+    ctx.lineWidth=Math.max(1,size*0.5);
+    ctx.globalAlpha=(+oR.value/100)*flow*0.6;
+    line(x1,y1,x2,y2);
+    for(let i=0;i<2;i++){const ox=(Math.random()-.5)*2,oy=(Math.random()-.5)*2;ctx.globalAlpha=(+oR.value/100)*flow*0.2;line(x1+ox,y1+oy,x2+ox,y2+oy)}
+  } else {
+    line(x1,y1,x2,y2);
+  }
+
+  // Symmetry
+  if(symV()){line(canvas.width-x1,y1,canvas.width-x2,y2)}
+  if(symH()){line(x1,canvas.height-y1,x2,canvas.height-y2)}
+  if(symV()&&symH()){line(canvas.width-x1,canvas.height-y1,canvas.width-x2,canvas.height-y2)}
+
+  ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+}
+
+canvas.addEventListener('mousedown',e=>{
+  const[x,y]=getPos(e);
+  if(currentTool==='eyedropper'){const p=ctx.getImageData(Math.round(x),Math.round(y),1,1).data;[H,S,V]=rgbToHsv(p[0],p[1],p[2]);A=p[3]/255;updateAll();return}
+  if(currentTool==='fill'){floodFill(Math.round(x),Math.round(y),getCurColor());saveState();return}
+  drawing=true;lastX=x;lastY=y;
+  if(['line','rect','circle'].includes(currentTool))getTempCanvas();
+  else strokeAt(x,y,x,y);
+});
+
+canvas.addEventListener('mousemove',e=>{
+  const[x,y]=getPos(e);
+  document.getElementById('cursorPos').textContent=`${Math.round(x)}, ${Math.round(y)}`;
+  if(!drawing)return;
+  if(['line','rect','circle'].includes(currentTool)){
+    ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(tempCanvas,0,0);
+    const c=getCurColor();ctx.globalAlpha=+oR.value/100;ctx.strokeStyle=`rgba(${c.r},${c.g},${c.b},${A})`;ctx.lineWidth=+sR.value;ctx.lineCap='round';ctx.beginPath();
+    if(currentTool==='line'){ctx.moveTo(lastX,lastY);ctx.lineTo(x,y)}
+    else if(currentTool==='rect'){ctx.rect(lastX,lastY,x-lastX,y-lastY)}
+    else{const rx=(x-lastX)/2,ry=(y-lastY)/2;ctx.ellipse(lastX+rx,lastY+ry,Math.abs(rx),Math.abs(ry),0,0,Math.PI*2)}
+    ctx.stroke();ctx.globalAlpha=1;
+  } else {
+    strokeAt(lastX,lastY,x,y);lastX=x;lastY=y;
+  }
+  drawSymOverlay();
+});
+
+canvas.addEventListener('mouseup',()=>{if(drawing){drawing=false;saveState()}});
+canvas.addEventListener('mouseleave',()=>{if(drawing){drawing=false;saveState()}});
+
+/* Grid overlay */
+const gridC=document.getElementById('gridCanvas'),gridCtx=gridC.getContext('2d');
+function drawGrid(){gridCtx.clearRect(0,0,1000,660);if(!document.getElementById('gridToggle').checked){gridC.style.display='none';return}
+  gridC.style.display='block';gridCtx.strokeStyle='rgba(255,255,255,.08)';gridCtx.lineWidth=1;
+  for(let x=0;x<1000;x+=40){gridCtx.beginPath();gridCtx.moveTo(x,0);gridCtx.lineTo(x,660);gridCtx.stroke()}
+  for(let y=0;y<660;y+=40){gridCtx.beginPath();gridCtx.moveTo(0,y);gridCtx.lineTo(1000,y);gridCtx.stroke()}}
+document.getElementById('gridToggle').addEventListener('change',drawGrid);
+
+/* Symmetry overlay */
+const symC=document.getElementById('symCanvas'),symCtx=symC.getContext('2d');
+function drawSymOverlay(){symCtx.clearRect(0,0,1000,660);
+  if(!symV()&&!symH()){symC.style.display='none';return}
+  symC.style.display='block';symCtx.setLineDash([6,4]);symCtx.strokeStyle='rgba(139,92,246,.35)';symCtx.lineWidth=1;
+  if(symV()){symCtx.beginPath();symCtx.moveTo(500,0);symCtx.lineTo(500,660);symCtx.stroke()}
+  if(symH()){symCtx.beginPath();symCtx.moveTo(0,330);symCtx.lineTo(1000,330);symCtx.stroke()}
+  symCtx.setLineDash([])}
+document.getElementById('symToggle').addEventListener('change',drawSymOverlay);
+document.getElementById('symHToggle').addEventListener('change',drawSymOverlay);
+
+/* Flood fill */
+function floodFill(sx,sy,fc){const id=ctx.getImageData(0,0,canvas.width,canvas.height);const d=id.data;const w=canvas.width;const ti=(sy*w+sx)*4;const tr=d[ti],tg=d[ti+1],tb=d[ti+2];if(tr===fc.r&&tg===fc.g&&tb===fc.b)return;const stack=[[sx,sy]];const match=i=>d[i]===tr&&d[i+1]===tg&&d[i+2]===tb;while(stack.length){const[cx,cy]=stack.pop();const ci=(cy*w+cx)*4;if(cx<0||cx>=w||cy<0||cy>=canvas.height||!match(ci))continue;d[ci]=fc.r;d[ci+1]=fc.g;d[ci+2]=fc.b;d[ci+3]=Math.round(A*255);stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1])}ctx.putImageData(id,0,0)}
+
+/* Flip */
+document.getElementById('flipH').addEventListener('click',()=>{const img=new Image();img.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();ctx.translate(canvas.width,0);ctx.scale(-1,1);ctx.drawImage(img,0,0);ctx.restore();saveState()};img.src=canvas.toDataURL()});
+document.getElementById('flipV').addEventListener('click',()=>{const img=new Image();img.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();ctx.translate(0,canvas.height);ctx.scale(1,-1);ctx.drawImage(img,0,0);ctx.restore();saveState()};img.src=canvas.toDataURL()});
+
+/* Export */
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const fmt=document.getElementById('exportFmt').value;
+  const a=document.createElement('a');
+  if(fmt==='svg'){
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}"><image href="${canvas.toDataURL('image/png')}" width="${canvas.width}" height="${canvas.height}"/></svg>`;
+    a.download='canvasforge-pro.svg';a.href='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  } else {
+    a.download=`canvasforge-pro.${fmt}`;a.href=canvas.toDataURL(`image/${fmt}`,0.95);
+  }
+  a.click();
+});
+
+/* Keyboard */
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='z'){e.preventDefault();document.getElementById('undoBtn').click()}
+  if(e.ctrlKey&&e.key==='y'){e.preventDefault();document.getElementById('redoBtn').click()}
+  const km={b:'brush',p:'pencil',m:'marker',a:'airbrush',w:'watercolor',e:'eraser',g:'fill',i:'eyedropper'};
+  if(km[e.key]&&!e.ctrlKey){const btn=document.querySelector(`[data-tool="${km[e.key]}"]`);if(btn)btn.click()}
+});
+</script>
+</body>
+</html>
